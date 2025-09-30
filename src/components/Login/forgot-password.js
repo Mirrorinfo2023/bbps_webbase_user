@@ -1,92 +1,86 @@
-// import { Box, Container, Divider, Typography, Paper, Tab, Grid, useMediaQuery, TextField, Button } from "@mui/material";
-import { Grid, TextField, FormControlLabel, Checkbox, Box, Button, FormHelperText, Snackbar, Alert, Typography, InputAdornment, IconButton, FormControl, InputLabel, OutlinedInput } from "@mui/material";
-import { useEffect, useRef, useState } from "react";
-import TabContext from '@mui/lab/TabContext';
-import TabList from '@mui/lab/TabList';
-import TabPanel from '@mui/lab/TabPanel';
-import UserName from "./UserName";
-import Link from "next/link";
-import style from "./Login.module.css";
-import classNames from "classnames";
-import { Login, RadioButtonChecked, RadioButtonUnchecked } from "@mui/icons-material";
-import Image from "next/image";
-import { Carousel } from 'react-responsive-carousel';
+// components/forgot-password.jsx
+import { Grid, TextField, Button, Typography, InputAdornment, Box } from "@mui/material";
+import { useState } from "react";
+import { Person, ArrowForward } from "@mui/icons-material";
 import styles from "./Login.module.css";
-import { ArrowForward, Person, Lock } from "@mui/icons-material";
-import { useMediaQuery } from "@mui/material";
 
 const ForgotPassword = ({ onBack }) => {
-    const [userName, setUserName] = useState("");  // 👈 Add this
-    const [value, setValue] = useState('1');
-    const [valueMaster, setValueMaster] = useState('1');
+  const [username, setUsername] = useState("");
+  const [error, setError] = useState("");
 
-    const handleChange = (event, newValue) => {
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    if (!username.trim()) {
+      setError("Username is required");
+      return;
+    }
 
-        setValue(newValue);
+    // Handle forgot password logic here
+    console.log("Reset password for:", username);
+    
+    // Show success message or redirect
+    alert("Password reset instructions sent to your registered mobile number");
+    onBack();
+  };
 
-    };
+  const handleChange = (value) => {
+    setUsername(value);
+    if (error) setError("");
+  };
 
-    const handleChangeMaster = (event, newValue) => {
-
-        setValueMaster(newValue);
-
-    };
-    // 👇 Define handleSubmit here
-    const handleSubmit = () => {
-        if (!userName.trim()) {
-            alert("Please enter your username");
-            return;
-        }
-
-        // TODO: add your reset password logic here
-        console.log("Reset password for:", userName);
-
-        // maybe go back to login screen
-        if (onBack) onBack();
-    };
-    const isXsScreen = useMediaQuery('(max-width:600px)');
-
-    return (
-        <Grid container spacing={2} className={styles.container}>
-
-
-            <Grid item xs={12}>
-                <Typography className={styles.label}>Username</Typography>
-                <TextField
-                    fullWidth
-                    size="small"
-                    variant="outlined"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    placeholder="Enter username"
-                    InputProps={{
-                        className: styles.textFieldRoot,
-                        startAdornment: (
-                            <InputAdornment position="start">
-                                <Person className={styles.inputIcon} />
-                            </InputAdornment>
-                        ),
-                    }}
-                />
-            </Grid>
-            <Grid item xs={12}>
-
-                <Button
-                    variant="contained"
-                    size="large"
-                    endIcon={
-                        <Box className={styles.arrowIconWrapper}>
-                            <ArrowForward className={styles.arrowIcon} />
-                        </Box>
-                    }
-                    className={styles.loginButton}
-                    onClick={handleSubmit}
-                >
-                    Send
-                </Button>
-
-            </Grid>
+  return (
+    <form onSubmit={handleSubmit}>
+      <Grid container spacing={3} className={styles.formContainer}>
+        <Grid item xs={12}>
+          <Typography className={styles.inputLabel}>Username</Typography>
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder="Enter your username"
+            value={username}
+            onChange={(e) => handleChange(e.target.value)}
+            error={Boolean(error)}
+            helperText={error}
+            InputProps={{
+              className: styles.textInput,
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Person className={styles.inputIcon} />
+                </InputAdornment>
+              ),
+            }}
+          />
         </Grid>
-    );
-}
+
+        <Grid item xs={12}>
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            size="large"
+            endIcon={
+              <Box className={styles.arrowIcon}>
+                <ArrowForward />
+              </Box>
+            }
+            className={styles.loginButton}
+          >
+            Send Reset Link
+          </Button>
+        </Grid>
+
+        <Grid item xs={12}>
+          <Typography 
+            className={styles.backLink} 
+            onClick={onBack}
+          >
+            ← Back to Login
+          </Typography>
+        </Grid>
+      </Grid>
+    </form>
+  );
+};
+
 export default ForgotPassword;

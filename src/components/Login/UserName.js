@@ -1,102 +1,52 @@
-import { Grid, TextField, FormControlLabel, Checkbox, Box, Button, FormHelperText, Snackbar, Alert, Typography, InputAdornment, IconButton, FormControl, InputLabel, OutlinedInput } from "@mui/material";
-import Cookies from "js-cookie";
-import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
-import api from "../../../utils/api";
-import CryptoJS from 'crypto-js';
-import { Padding, Visibility, VisibilityOff } from "@mui/icons-material";
-import { DataEncrypt, DataDecrypt } from '../../../utils/encryption';
+// components/UserName.jsx
+import { Grid, TextField, Button, Typography, InputAdornment, IconButton, Box, Snackbar, Alert } from "@mui/material";
+import { useState } from "react";
+import { Visibility, VisibilityOff, Person, Lock, ArrowForward } from "@mui/icons-material";
 import ReCAPTCHA from 'react-google-recaptcha';
-import { ArrowForward, Person, Lock } from "@mui/icons-material";
-import styles from "./Login.module.css"; // Import styles
+import { useRouter } from "next/router";
+import Cookies from "js-cookie";
+import api from "../../../utils/api";
+import styles from "./Login.module.css";
 
-const UserName = ({ handleChange, onForgotPassword }) => {
-
+const UserName = ({ onForgotPassword }) => {
     const route = useRouter();
 
-    const [userName, setUserName] = useState('');
-    const [password, setPassword] = useState('');
-    //const [term, setTerm] = useState(true);
-    const [captchaToken, setCaptchaToken] = useState(null);
-
-    const [alert, setAlert] = useState({ open: false, type: false, message: null });
-
-    const [error, setError] = useState({
-        username: false,
-        password: false,
-        captcha: false
+    const [formData, setFormData] = useState({
+        mobileNumber: "",
+        password: ""
     });
+    const [showPassword, setShowPassword] = useState(false);
+    const [errors, setErrors] = useState({});
+    const [captchaToken, setCaptchaToken] = useState(null);
+    const [alert, setAlert] = useState({ open: false, type: false, message: null });
+    const [loading, setLoading] = useState(false);
+    const handleSignUpClick = () => {
+        route.push('/sign-up'); // This will navigate to your existing sign-up.js page
+    };
+    const handleChange = (field) => (event) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: event.target.value
+        }));
+        // Clear error when user starts typing
+        if (errors[field]) {
+            setErrors(prev => ({
+                ...prev,
+                [field]: ""
+            }));
+        }
+    };
 
     const handleCaptchaChange = (token) => {
         setCaptchaToken(token);
-    };
-
-    const submitHandler = async (e) => {
-        e.preventDefault();
-
-        // Build error object
-        const newError = {
-            username: userName.trim() === "" ? "Username is required." : "",
-            password: password.trim() === "" ? "Password is required." : "",
-            captcha: !captchaToken ? "Please complete the CAPTCHA." : ""
-        };
-
-        setError(newError);
-
-        // If any error message is not empty → stop here
-        if (Object.values(newError).some((msg) => msg !== "")) {
-            return;
-        }
-
-        // ✅ No errors → continue with API call
-        try {
-            const reqData = {
-                username: userName,
-                password: password,
-                is_admin: 1,
-                captchaToken
-            };
-
-            const response = await api.post('/api/users/admin_login', reqData);
-
-            console.log("respomce is", response)
-            if (response.status === 200) {
-                setAlert({ open: true, type: true, message: 'SignIn successfully!' });
-
-                const responseData = response.data.data; // user info
-                const token = response.data.token;       // token from top-level
-
-                localStorage.setItem('role', 'user');
-                localStorage.setItem('uid', responseData.id);
-                localStorage.setItem('email', responseData.email);
-                localStorage.setItem('token', token);  // ✅ set token correctly
-                localStorage.setItem('name', `${responseData.first_name} ${responseData.last_name}`);
-                localStorage.setItem('mobile', responseData.mobile);
-                localStorage.setItem('employee_role', responseData.role_name);
-                localStorage.setItem('menu', JSON.stringify(response.data.employeeMenu));
-
-                Cookies.set('role', 'user', { expires: 1 });
-                Cookies.set('uid', responseData.id, { expires: 1 });
-                Cookies.set('name', `${responseData.first_name} ${responseData.last_name}`);
-                Cookies.set('mobile', responseData.mobile);
-                Cookies.set('employee_role', responseData.role_name, { expires: 1 });
-                Cookies.set('token', token, { expires: 1 }); // ✅ set token in cookies too
-
-                route.push('/dashboard');
-            }
-            else {
-                setAlert({ open: true, type: false, message: response.data.message });
-            }
-        } catch (error) {
-            // handle backend error same as before
-            if (error?.response?.status === 401) {
-                setAlert({ open: true, type: false, message: error.response.data.message });
-            } else {
-                setAlert({ open: true, type: false, message: error.message });
-            }
+        // Clear captcha error
+        if (errors.captcha) {
+            setErrors(prev => ({
+                ...prev,
+                captcha: ""
+            }));
         }
     };
-
 
     const handleClose = (event, reason) => {
         if (reason === 'clickaway') {
@@ -105,274 +55,232 @@ const UserName = ({ handleChange, onForgotPassword }) => {
         setAlert({ open: false, type: false, message: null });
     };
 
+    const submitHandler = async (e) => {
+        e.preventDefault();
+        setLoading(true);
 
-    function isValidEmail(email) {
-        const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
-        return emailPattern.test(email);
-    }
+        // Build error object
+        const newErrors = {
+            mobileNumber: !formData.mobileNumber.trim() ? "Mobile number is required." : "",
+            password: !formData.password ? "Password is required." : "",
+            captcha: !captchaToken ? "Please complete the CAPTCHA." : ""
+        };
 
-    const [otp, setOTP] = useState('');
-    const [loginWithOtp, setLoginWithOtp] = useState(false);
-    const [userEmail, setUserEmail] = useState('');
-    const [name, setName] = useState('');
-    const [mobile, setMobile] = useState('');
-    const [uid, setUid] = useState('');
-    const [employeeRole, setRmployeeRole] = useState('');
+        setErrors(newErrors);
 
-    useEffect(() => {
-        const getEmail = localStorage.getItem('email');
-        const getName = localStorage.getItem('name');
-        const getMobile = localStorage.getItem('mobile');
-        const getUid = localStorage.getItem('uid');
-        const getEmployeeRole = localStorage.getItem('employee_role');
-
-        setUserEmail(getEmail);
-        setName(getName);
-        setMobile(getMobile);
-        setUid(getUid);
-        setRmployeeRole(getEmployeeRole);
-
-        setOTP('');
-        setPassword('');
-
-    }, [loginWithOtp])
-
-    const sendOtp = async () => {
-
-        if (userName && userEmail && name) {
-
-            const reqData = {
-                mode: 'API',
-                type: 'Admin',
-                category: 'Login',
-                mobile: mobile,
-                email: userEmail,
-                name: name,
-            }
-
-            const encryptedData = DataEncrypt(JSON.stringify(reqData));
-
-            const encReqData = {
-                encReq: encryptedData
-            };
-
-            try {
-
-                const response = await api.post("/api/otp/get-otp", encReqData);
-                const decryptedObject = DataDecrypt(response.data);
-
-                if (response.status === 200) {
-                    setLoginWithOtp(true);
-                    setAlert({ open: true, type: true, message: "OTP sent to your register mobile no." });
-                } else {
-                    setAlert({ open: true, type: false, message: decryptedObject.data.message });
-                }
-
-            } catch (error) {
-
-                if (error?.response?.status && error.response.status === 404) {
-                    setAlert({ open: true, type: false, message: error.response.data });
-                } else {
-
-                    if (error?.response?.data?.error) {
-                        setAlert({ open: true, type: false, message: error.response.data.error });
-                    } else {
-                        setAlert({ open: true, type: false, message: error.message });
-                    }
-                }
-
-            }
-
-        } else {
-            setAlert({ open: true, type: false, message: "Please enter valid Mobile no." });
+        // If any error message is not empty → stop here
+        if (Object.values(newErrors).some((msg) => msg !== "")) {
+            setLoading(false);
+            return;
         }
 
-    }
-
-    const verifyOtp = async () => {
-
-        if (userName && otp) {
-
+        try {
             const reqData = {
-                otp: otp,
-                mode: 'API',
-                type: 'Admin',
-                category: 'Login',
-                mobile: mobile
-            }
-
-            const encryptedData = DataEncrypt(JSON.stringify(reqData));
-
-            const encReqData = {
-                encReq: encryptedData
+                username: formData.mobileNumber,
+                password: formData.password,
+                is_admin: 1,
+                captchaToken
             };
 
-            try {
+            const response = await api.post('/api/users/admin_login', reqData);
 
-                const response = await api.post("/api/otp/verify-otp", encReqData);
+            console.log("response is", response);
 
-                if (response.status === 200) {
-                    setAlert({ open: true, type: false, message: 'SignIn successfully!' });
-                    Cookies.set('role', 'user', { expires: 1 });
-                    Cookies.set('uid', uid, { expires: 1 });
-                    Cookies.set('name', name);
-                    Cookies.set('mobile', mobile);
-                    Cookies.set('employee_role', employeeRole, { expires: 1 });
-                    //localStorage.setItem('menu', JSON.stringify(response.data.employeeMenu));
-                    route.push('/dashboard');
-                } else {
+            if (response.status === 200) {
+                setAlert({ open: true, type: true, message: 'SignIn successfully!' });
 
-                }
+                const responseData = response.data.data; // user info
+                const token = response.data.token;       // token from top-level
 
+                // Store data in localStorage
+                localStorage.setItem('role', 'user');
+                localStorage.setItem('uid', responseData.id);
+                localStorage.setItem('email', responseData.email);
+                localStorage.setItem('token', token);
+                localStorage.setItem('name', `${responseData.first_name} ${responseData.last_name}`);
+                localStorage.setItem('mobile', responseData.mobile);
+                localStorage.setItem('employee_role', responseData.role_name);
+                localStorage.setItem('menu', JSON.stringify(response.data.employeeMenu));
 
-            } catch (error) {
-                if (error?.response?.status && error.response.status === 404) {
-                    setAlert({ open: true, type: false, message: error.response.data });
-                } else if (error?.response?.status && error.response.status === 401) {
-                    setAlert({ open: true, type: false, message: 'Invalid Otp' });
-                } else {
+                // Store data in cookies
+                Cookies.set('role', 'user', { expires: 1 });
+                Cookies.set('uid', responseData.id, { expires: 1 });
+                Cookies.set('name', `${responseData.first_name} ${responseData.last_name}`);
+                Cookies.set('mobile', responseData.mobile);
+                Cookies.set('employee_role', responseData.role_name, { expires: 1 });
+                Cookies.set('token', token, { expires: 1 });
 
-                    if (error?.response?.data?.error) {
-                        setAlert({ open: true, type: false, message: error.response.data.error });
-                    } else {
-                        setAlert({ open: true, type: false, message: error.message });
-                    }
-                }
-
+                // Redirect to dashboard
+                route.replace('/dashboard');
+            } else {
+                setAlert({ open: true, type: false, message: response.data.message });
             }
-
-        } else {
-            setAlert({ open: true, type: false, message: "Please enter valid otp" });
+        } catch (error) {
+            // Handle backend error
+            if (error?.response?.status === 401) {
+                setAlert({ open: true, type: false, message: error.response.data.message });
+            } else {
+                setAlert({ open: true, type: false, message: error.message });
+            }
+        } finally {
+            setLoading(false);
         }
+    };
 
-    }
-
-    const [showPassword, setShowPassword] = useState(false);
-
-    const handleClickShowPassword = () => setShowPassword((show) => !show);
-
-    const handleMouseDownPassword = (event) => {
-        event.preventDefault();
+    const togglePasswordVisibility = () => {
+        setShowPassword(prev => !prev);
     };
 
     return (
-        <Grid container spacing={1} className={styles.container}>
-            {/* Username */}
-            <Grid item xs={12} >
-                <Typography className={styles.label}>Username</Typography>
-                <TextField
-                    fullWidth
-                    size="small"
-                    variant="outlined"
-                    value={userName}
-                    error={Boolean(error.username)}              // 🔹 highlights field
-                    helperText={error.username}                  // 🔹 shows message
-                    onChange={(e) => setUserName(e.target.value)}
-                    placeholder="Enter username"
-                    InputProps={{
-                        className: styles.textFieldRoot,
-                        startAdornment: (
-                            <InputAdornment position="start">
-                                <Person className={styles.inputIcon} />
-                            </InputAdornment>
-                        ),
-                    }}
-                />
-            </Grid>
+        <>
+            <form onSubmit={submitHandler}>
+                <Grid container spacing={2} className={styles.formContainer}>
+                    {/* Mobile Number Field */}
+                    <Grid item xs={12}>
+                        <Typography className={styles.inputLabel}>Mobile Number</Typography>
+                        <TextField
+                            fullWidth
+                            size="small"
+                            variant="outlined"
+                            value={formData.mobileNumber}
+                            onChange={handleChange('mobileNumber')}
+                            error={Boolean(errors.mobileNumber)}
+                            helperText={errors.mobileNumber}
+                            placeholder="Enter your mobile number"
+                            InputProps={{
+                                className: styles.textInput,
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <Person className={styles.inputIcon} />
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
+                    </Grid>
 
-            {/* Password */}
-            <Grid item xs={12} >
-                <Typography className={styles.label}>Password</Typography>
-                <TextField
-                    fullWidth
-                    size="small"
-                    variant="outlined"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    error={Boolean(error.password)}
-                    helperText={error.password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter password"
-                    InputProps={{
-                        className: styles.textFieldRoot,
-                        startAdornment: (
-                            <InputAdornment position="start">
-                                <Lock className={styles.inputIcon} />
-                            </InputAdornment>
-                        ),
-                        endAdornment: (
-                            <InputAdornment position="end">
-                                <IconButton
-                                    aria-label="toggle password visibility"
-                                    onClick={handleClickShowPassword}
-                                    onMouseDown={handleMouseDownPassword}
-                                    edge="end"
-                                    className={styles.passwordToggle}
-                                >
-                                    {showPassword ? (
-                                        <VisibilityOff className={styles.inputIcon} />
-                                    ) : (
-                                        <Visibility className={styles.inputIcon} />
-                                    )}
-                                </IconButton>
-                            </InputAdornment>
-                        ),
-                    }}
-                />
-            </Grid>
+                    {/* Password Field */}
+                    <Grid item xs={12}>
+                        <Typography className={styles.inputLabel}>Password</Typography>
+                        <TextField
+                            fullWidth
+                            size="small"
+                            variant="outlined"
+                            type={showPassword ? "text" : "password"}
+                            value={formData.password}
+                            onChange={handleChange('password')}
+                            error={Boolean(errors.password)}
+                            helperText={errors.password}
+                            placeholder="Enter your password"
+                            InputProps={{
+                                className: styles.textInput,
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <Lock className={styles.inputIcon} />
+                                    </InputAdornment>
+                                ),
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <IconButton
+                                            onClick={togglePasswordVisibility}
+                                            edge="end"
+                                            className={styles.passwordToggle}
+                                        >
+                                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                                        </IconButton>
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
+                    </Grid>
 
-            {/* 🔹 reCAPTCHA right after password field */}
-            <Grid item xs={12}>
-                <Box sx={{ transform: "scale(0.85)", transformOrigin: "0 0" }}>
-                    <ReCAPTCHA
-                        sitekey="6LdHTbwrAAAAAGawIo2escUPr198m8cP3o_ZzZK1"
-                        onChange={handleCaptchaChange}
-                    />
-                </Box>
-                {error.captcha && (
-                    <Typography variant="caption" color="error">
-                        {error.captcha}
-                    </Typography>
-                )}
-            </Grid>
-            {/* Login Button + Forgot Password */}
-            <Grid item xs={12} sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "1px" }}>
-                <Button
-                    variant="contained"
-                    size="large"
-                    endIcon={
-                        <Box className={styles.arrowIconWrapper}>
-                            <ArrowForward className={styles.arrowIcon} />
+                    {/* CAPTCHA Field */}
+                    <Grid item xs={12}>
+                        <Box sx={{ transform: "scale(0.85)", transformOrigin: "0 0" }}>
+                            <ReCAPTCHA
+                                sitekey="6LdHTbwrAAAAAGawIo2escUPr198m8cP3o_ZzZK1"
+                                onChange={handleCaptchaChange}
+                            />
                         </Box>
-                    }
-                    className={styles.loginButton}
-                    onClick={submitHandler}
-                >
-                    Login
-                </Button>
+                        {errors.captcha && (
+                            <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1 }}>
+                                {errors.captcha}
+                            </Typography>
+                        )}
+                    </Grid>
 
-                <Typography
-                    className={styles.forgotPassword}
-                    onClick={onForgotPassword}
-                >
-                    Forgot Password ?
-                </Typography>
-            </Grid>
-            {/* Don’t have an account? Sign Up */}
-            <Grid item xs={12}>
-                <Typography variant="body2" className={styles.subText} sx={{ textAlign: "center", }}>
-                    Don’t have an account?{" "}
-                    <span
-                        style={{ color: "#2198F3", cursor: "pointer", fontWeight: "bold" }}
-                        onClick={() => console.log("Sign Up clicked")} // replace with your navigation
-                    >
-                        Sign Up
-                    </span>
-                </Typography>
-            </Grid>
+                    {/* Login Button */}
+                    <Grid item xs={12} sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "8px" }}>
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            size="large"
+                            disabled={loading}
+                            endIcon={
+                                <Box className={styles.arrowIconWrapper}>
+                                    <ArrowForward className={styles.arrowIcon} />
+                                </Box>
+                            }
+                            className={styles.loginButton}
+                            sx={{
+                                minWidth: '120px',
+                                backgroundColor: '#1976d2', // Fresh blue color
+                                '&:hover': {
+                                    backgroundColor: '#1565c0', // Darker blue on hover
+                                }
+                            }}
+                        >
+                            {loading ? 'Logging in...' : 'Log In'}
+                        </Button>
+                    </Grid>
 
-        </Grid>
+                    {/* Additional Links */}
+                    <Grid item xs={12}>
+                        <Box className={styles.linksContainer}>
+                            <Typography
+                                className={styles.forgotPassword}
+                                onClick={onForgotPassword}
+                                sx={{ cursor: 'pointer' }}
+                            >
+                                Forgot Password?
+                            </Typography>
+                            <Typography className={styles.linkText}>
+                                Unblock Me
+                            </Typography>
+                        </Box>
+                    </Grid>
+
+                    {/* Don't have an account? Sign Up */}
+                    <Grid item xs={12}>
+                        <Typography variant="body2" className={styles.subText} sx={{ textAlign: "center" }}>
+                            Don't have an account?{" "}
+                            <span
+                                style={{ color: "#2198F3", cursor: "pointer", fontWeight: "bold" }}
+                                onClick={handleSignUpClick} // Use the navigation function
+                            >
+                                Sign Up
+                            </span>
+                        </Typography>
+                    </Grid>
+                </Grid>
+            </form>
+
+            {/* Alert Snackbar */}
+            <Snackbar
+                open={alert.open}
+                autoHideDuration={6000}
+                onClose={handleClose}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Alert
+                    onClose={handleClose}
+                    severity={alert.type ? 'success' : 'error'}
+                    variant="filled"
+                >
+                    {alert.message}
+                </Alert>
+            </Snackbar>
+        </>
     );
-
 };
+
 export default UserName;

@@ -10,11 +10,7 @@ import { DataEncrypt, DataDecrypt } from '../../../utils/encryption';
 
 import styles from "./Login.module.css";
 
-<<<<<<< Updated upstream
-const UserName = ({ onForgotPassword }) => {
-=======
 const UserName = ({ onForgotPassword, onUnblock }) => {
->>>>>>> Stashed changes
     const route = useRouter();
 
     const [formData, setFormData] = useState({
@@ -270,15 +266,12 @@ const UserName = ({ onForgotPassword, onUnblock }) => {
                             >
                                 Forgot Password?
                             </Typography>
-<<<<<<< Updated upstream
-                            <Typography className={styles.linkText}>
-=======
+
                             <Typography className={styles.linkText}
 
                                 onClick={onUnblock}
                                 sx={{ cursor: 'pointer' }}
                             >
->>>>>>> Stashed changes
                                 Unblock Me
                             </Typography>
                         </Box>

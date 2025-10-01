@@ -7,7 +7,7 @@ const dashboard = () => {
     return (
         <>
             <Layout >
-                <Dashboard/>
+                <Dashboard />
             </Layout>
         </>
     )

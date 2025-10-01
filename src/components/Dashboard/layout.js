@@ -255,18 +255,20 @@ function Layout(props) {
 
   const handleLogout = () => {
     setAnchorEl(null);
+
+    // Remove cookies
     Cookies.remove('department');
     Cookies.remove('uid');
-
-    let role = Cookies.get('role');
-
-
+    const role = Cookies.get('role');
     Cookies.remove('role');
 
-    if (role === "user") {
-      router.push('/login')
+    // Clear sessionStorage and localStorage
+    sessionStorage.clear();
+    localStorage.clear();
 
-    }
+
+    router.push('/login');
+
   };
 
 
@@ -625,7 +627,16 @@ function Layout(props) {
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             PaperProps={{ sx: { mt: 1, boxShadow: '0 4px 20px rgba(103,58,183,0.10)', borderRadius: 2 } }}
           >
-            <MenuItem onClick={handleClose} sx={{ py: 1, px: 2 }}>Profile</MenuItem>
+            <MenuItem
+              onClick={() => {
+                handleClose();
+                router.push('/profile');
+              }}
+              sx={{ py: 1, px: 2 }}
+            >
+              Profile
+            </MenuItem>
+
             <MenuItem sx={{ py: 1, px: 2 }}>
               <Link style={{ textDecoration: 'none', color: 'inherit' }} href={`/reset-password`}>
                 Reset Password

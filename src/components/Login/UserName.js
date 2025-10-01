@@ -6,9 +6,15 @@ import ReCAPTCHA from 'react-google-recaptcha';
 import { useRouter } from "next/router";
 import Cookies from "js-cookie";
 import api from "../../../utils/api";
+import { DataEncrypt, DataDecrypt } from '../../../utils/encryption';
+
 import styles from "./Login.module.css";
 
+<<<<<<< Updated upstream
 const UserName = ({ onForgotPassword }) => {
+=======
+const UserName = ({ onForgotPassword, onUnblock }) => {
+>>>>>>> Stashed changes
     const route = useRouter();
 
     const [formData, setFormData] = useState({
@@ -59,22 +65,21 @@ const UserName = ({ onForgotPassword }) => {
         e.preventDefault();
         setLoading(true);
 
-        // Build error object
+        // Validation
         const newErrors = {
             mobileNumber: !formData.mobileNumber.trim() ? "Mobile number is required." : "",
             password: !formData.password ? "Password is required." : "",
             captcha: !captchaToken ? "Please complete the CAPTCHA." : ""
         };
-
         setErrors(newErrors);
 
-        // If any error message is not empty → stop here
-        if (Object.values(newErrors).some((msg) => msg !== "")) {
+        if (Object.values(newErrors).some(msg => msg !== "")) {
             setLoading(false);
             return;
         }
 
         try {
+            // Prepare request data
             const reqData = {
                 username: formData.mobileNumber,
                 password: formData.password,
@@ -82,43 +87,65 @@ const UserName = ({ onForgotPassword }) => {
                 captchaToken
             };
 
-            const response = await api.post('/api/users/admin_login', reqData);
+            // Encrypt request
+            const encReq = DataEncrypt(JSON.stringify(reqData));
 
-            console.log("response is", response);
+            // Send encrypted request
+            const response = await api.post('/api/users/2736fab291f04e69b62d490c3c09361f5b82461a', { encReq });
 
-            if (response.status === 200) {
+            // Decrypt response
+            const decryptedResponse = DataDecrypt(response.data);
+
+            console.log("decryptedResponse are: ", decryptedResponse)
+            if (decryptedResponse.status === 200) {
                 setAlert({ open: true, type: true, message: 'SignIn successfully!' });
 
-                const responseData = response.data.data; // user info
-                const token = response.data.token;       // token from top-level
+                const userData = decryptedResponse.data; // user info
+                const token = decryptedResponse.token;   // token from top-level
+                const refreshToken = decryptedResponse.refreshToken;   // token from top-level
 
-                // Store data in localStorage
-                localStorage.setItem('role', 'user');
-                localStorage.setItem('uid', responseData.id);
-                localStorage.setItem('email', responseData.email);
-                localStorage.setItem('token', token);
-                localStorage.setItem('name', `${responseData.first_name} ${responseData.last_name}`);
-                localStorage.setItem('mobile', responseData.mobile);
-                localStorage.setItem('employee_role', responseData.role_name);
-                localStorage.setItem('menu', JSON.stringify(response.data.employeeMenu));
+                // Store top-level items
+                sessionStorage.setItem('token', token);
+                sessionStorage.setItem('refreshToken', refreshToken);
+                sessionStorage.setItem('role', 'user');
+                sessionStorage.setItem('menu', JSON.stringify(decryptedResponse.employeeMenu || []));
 
-                // Store data in cookies
-                Cookies.set('role', 'user', { expires: 1 });
-                Cookies.set('uid', responseData.id, { expires: 1 });
-                Cookies.set('name', `${responseData.first_name} ${responseData.last_name}`);
-                Cookies.set('mobile', responseData.mobile);
-                Cookies.set('employee_role', responseData.role_name, { expires: 1 });
-                Cookies.set('token', token, { expires: 1 });
+                // Store each field from backend separately
+                sessionStorage.setItem('id', userData.id);
+                sessionStorage.setItem('mlm_id', userData.mlm_id);
+                sessionStorage.setItem('first_name', userData.first_name);
+                sessionStorage.setItem('last_name', userData.last_name);
+                sessionStorage.setItem('username', userData.username);
+                sessionStorage.setItem('email', userData.email);
+                sessionStorage.setItem('mobile', userData.mobile);
+                sessionStorage.setItem('refered_by', userData.refered_by);
+                sessionStorage.setItem('country', userData.country);
+                sessionStorage.setItem('state', userData.state);
+                sessionStorage.setItem('circle', userData.circle);
+                sessionStorage.setItem('district', userData.district);
+                sessionStorage.setItem('division', userData.division);
+                sessionStorage.setItem('region', userData.region);
+                sessionStorage.setItem('block', userData.block);
+                sessionStorage.setItem('pincode', userData.pincode);
+                sessionStorage.setItem('address', userData.address);
+                sessionStorage.setItem('dob', userData.dob);
+                sessionStorage.setItem('is_prime', userData.is_prime);
+                sessionStorage.setItem('registration_date', userData.registration_date);
+                sessionStorage.setItem('role_name', userData.role_name || '');
 
                 // Redirect to dashboard
                 route.replace('/dashboard');
             } else {
-                setAlert({ open: true, type: false, message: response.data.message });
+                setAlert({ open: true, type: false, message: decryptedResponse.message });
             }
         } catch (error) {
-            // Handle backend error
             if (error?.response?.status === 401) {
-                setAlert({ open: true, type: false, message: error.response.data.message });
+                try {
+                    const decryptedError = DataDecrypt(error.response.data);
+                    setAlert({ open: true, type: false, message: decryptedError.message });
+                } catch (err) {
+                    setAlert({ open: true, type: false, message: error.response.data });
+                }
             } else {
                 setAlert({ open: true, type: false, message: error.message });
             }
@@ -243,7 +270,15 @@ const UserName = ({ onForgotPassword }) => {
                             >
                                 Forgot Password?
                             </Typography>
+<<<<<<< Updated upstream
                             <Typography className={styles.linkText}>
+=======
+                            <Typography className={styles.linkText}
+
+                                onClick={onUnblock}
+                                sx={{ cursor: 'pointer' }}
+                            >
+>>>>>>> Stashed changes
                                 Unblock Me
                             </Typography>
                         </Box>
@@ -252,7 +287,7 @@ const UserName = ({ onForgotPassword }) => {
                     {/* Don't have an account? Sign Up */}
                     <Grid item xs={12}>
                         <Typography variant="body2" className={styles.subText} sx={{ textAlign: "center" }}>
-                            Don't have an account?{" "}
+                            Dont have an account?{" "}
                             <span
                                 style={{ color: "#2198F3", cursor: "pointer", fontWeight: "bold" }}
                                 onClick={handleSignUpClick} // Use the navigation function

@@ -4,8 +4,6 @@ import store from '../../store'
 //import DisableCopyPasteRightClick from "../components/UI/DisableCopyPasteRightClick";
 
 
-
-
 export default function App({ Component, pageProps }) {
 
   // const arr = [1,3,2,7,4,0,2,8,2,8,6]

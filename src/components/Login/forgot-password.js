@@ -66,7 +66,7 @@ const ForgotPassword = ({ onBack }) => {
             }
             className={styles.loginButton}
           >
-            Send Reset Link
+            Send Reset 
           </Button>
         </Grid>
 

@@ -42,18 +42,18 @@ const drawerWidth = 200;
 let menuArray = [
   { redirect: 'dashboard', name: 'Dashboard', parent: 'dashboard', icon: <DashboardIcon sx={{ fontSize: 20 }} /> },
   { redirect: '#', name: 'Masters', parent: 'masters', icon: <WidgetsIcon sx={{ fontSize: 20 }} /> },
-  { redirect: '#', name: 'Affilate', parent: 'networking', icon: <PeopleIcon sx={{ fontSize: 20 }} /> },
-  { redirect: '#', name: 'Wallet', parent: 'wallet', icon: <AccountBalanceWalletIcon sx={{ fontSize: 20 }} /> },
-  { redirect: '#', name: 'Marketing', parent: 'marketing', icon: <CampaignIcon sx={{ fontSize: 20 }} /> },
+  // { redirect: '#', name: 'Affilate', parent: 'networking', icon: <PeopleIcon sx={{ fontSize: 20 }} /> },
+  // { redirect: '#', name: 'Wallet', parent: 'wallet', icon: <AccountBalanceWalletIcon sx={{ fontSize: 20 }} /> },
+  // { redirect: '#', name: 'Marketing', parent: 'marketing', icon: <CampaignIcon sx={{ fontSize: 20 }} /> },
   // { redirect: '#', name: 'Recharge/Payment', parent: 'recharge', icon: <PaymentIcon sx={{ fontSize: 20 }} /> },
   // { redirect: '#', name: 'Staff', parent: 'staff', icon: <PeopleIcon sx={{ fontSize: 20 }} /> },
   // { redirect: '#', name: 'Investment', parent: 'investment', icon: <PeopleIcon sx={{ fontSize: 20 }} /> },
-  { redirect: '#', name: 'Settings', parent: 'setting', icon: <SettingsIcon sx={{ fontSize: 20 }} /> }
+  // { redirect: '#', name: 'Settings', parent: 'setting', icon: <SettingsIcon sx={{ fontSize: 20 }} /> }
 ]
 
 let menuArray1 = [
 
-  { redirect: 'get-banners', name: 'Banners', parent: 'masters' },
+  { redirect: 'add-money-history', name: 'add-money', parent: 'masters' },
   // { redirect: 'leads-category', name: 'Lead Category', parent: 'masters' },
   // { redirect: 'leads-report', name: 'Lead List', parent: 'masters' },
   // { redirect: 'leads-user-action-report', name: 'Leads User Action Report', parent: 'masters' },
@@ -61,11 +61,11 @@ let menuArray1 = [
   // { redirect: 'leads-user-track-report', name: 'Leads User Track Report', parent: 'masters' },
   // { redirect: 'graphics-report', name: 'Marketing Report', parent: 'masters' },
   // { redirect: 'meeting', name: 'Meeting Report', parent: 'masters' },
-  { redirect: 'get-meeting-enroll-report', name: 'Meeting Enroll Report', parent: 'masters' },
+  // { redirect: 'get-meeting-enroll-report', name: 'Meeting Enroll Report', parent: 'masters' },
   // { redirect: 'product-list', name: 'Product List', parent: 'masters' },
-  { redirect: 'profit-return', name: 'Profit Return', parent: 'masters' },
-   { redirect: 'massage-setting', name: 'Massage Setting', parent: 'masters' },
-  { redirect: 'slab-setting', name: 'marketing', parent: 'masters' }
+  // { redirect: 'profit-return', name: 'Profit Return', parent: 'masters' },
+  //  { redirect: 'massage-setting', name: 'Massage Setting', parent: 'masters' },
+  // { redirect: 'slab-setting', name: 'marketing', parent: 'masters' }
 ];
 
 let menuArray2 = [

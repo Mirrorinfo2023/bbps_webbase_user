@@ -555,7 +555,7 @@ export default function SignUpPage() {
                                         alignItems: 'center',
                                         gap: 0.5
                                     }}>
-                                        ✅ Valid: {referralStatus.name}
+                                         Valid: {referralStatus.name}
                                     </Typography>
                                 )}
                                 {referralStatus?.success === false && (
@@ -567,7 +567,7 @@ export default function SignUpPage() {
                                         alignItems: 'center',
                                         gap: 0.5
                                     }}>
-                                        ❌ {referralStatus.message || "Invalid referral ID"}
+                                         {referralStatus.message || "Invalid referral ID"}
                                     </Typography>
                                 )}
                             </Grid>

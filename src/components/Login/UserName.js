@@ -8,7 +8,7 @@ import Cookies from "js-cookie";
 import api from "../../../utils/api";
 import styles from "./Login.module.css";
 
-const UserName = ({ onForgotPassword }) => {
+const UserName = ({ onForgotPassword ,onUnblock }) => {
     const route = useRouter();
 
     const [formData, setFormData] = useState({
@@ -243,7 +243,11 @@ const UserName = ({ onForgotPassword }) => {
                             >
                                 Forgot Password?
                             </Typography>
-                            <Typography className={styles.linkText}>
+                            <Typography className={styles.linkText}
+                            
+                                onClick={onUnblock}
+                                sx={{ cursor: 'pointer' }}
+                            >
                                 Unblock Me
                             </Typography>
                         </Box>

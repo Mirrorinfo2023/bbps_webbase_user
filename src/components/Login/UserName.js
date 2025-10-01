@@ -1,4 +1,3 @@
-// components/UserName.jsx
 import { Grid, TextField, Button, Typography, InputAdornment, IconButton, Box, Snackbar, Alert } from "@mui/material";
 import { useState } from "react";
 import { Visibility, VisibilityOff, Person, Lock, ArrowForward } from "@mui/icons-material";
@@ -7,8 +6,9 @@ import { useRouter } from "next/router";
 import Cookies from "js-cookie";
 import api from "../../../utils/api";
 import styles from "./Login.module.css";
+import VerifyOtp from "@/components/Otp/VerifyOtp"; // Import OTP component
 
-const UserName = ({ onForgotPassword ,onUnblock }) => {
+const UserName = ({ onForgotPassword, onUnblock }) => {
     const route = useRouter();
 
     const [formData, setFormData] = useState({
@@ -20,15 +20,21 @@ const UserName = ({ onForgotPassword ,onUnblock }) => {
     const [captchaToken, setCaptchaToken] = useState(null);
     const [alert, setAlert] = useState({ open: false, type: false, message: null });
     const [loading, setLoading] = useState(false);
+    
+    // OTP Dialog State
+    const [showOtpDialog, setShowOtpDialog] = useState(false);
+    const [userData, setUserData] = useState(null);
+    const [otpLoading, setOtpLoading] = useState(false);
+
     const handleSignUpClick = () => {
-        route.push('/sign-up'); // This will navigate to your existing sign-up.js page
+        route.push('/sign-up');
     };
+
     const handleChange = (field) => (event) => {
         setFormData(prev => ({
             ...prev,
             [field]: event.target.value
         }));
-        // Clear error when user starts typing
         if (errors[field]) {
             setErrors(prev => ({
                 ...prev,
@@ -39,7 +45,6 @@ const UserName = ({ onForgotPassword ,onUnblock }) => {
 
     const handleCaptchaChange = (token) => {
         setCaptchaToken(token);
-        // Clear captcha error
         if (errors.captcha) {
             setErrors(prev => ({
                 ...prev,
@@ -59,7 +64,6 @@ const UserName = ({ onForgotPassword ,onUnblock }) => {
         e.preventDefault();
         setLoading(true);
 
-        // Build error object
         const newErrors = {
             mobileNumber: !formData.mobileNumber.trim() ? "Mobile number is required." : "",
             password: !formData.password ? "Password is required." : "",
@@ -68,7 +72,6 @@ const UserName = ({ onForgotPassword ,onUnblock }) => {
 
         setErrors(newErrors);
 
-        // If any error message is not empty → stop here
         if (Object.values(newErrors).some((msg) => msg !== "")) {
             setLoading(false);
             return;
@@ -79,18 +82,17 @@ const UserName = ({ onForgotPassword ,onUnblock }) => {
                 username: formData.mobileNumber,
                 password: formData.password,
                 is_admin: 1,
+                //  "app_key": "com.mirrorinfo",
                 captchaToken
             };
 
-            const response = await api.post('/api/users/admin_login', reqData);
+            const response = await api.post('/api/users/login', reqData);
 
             console.log("response is", response);
 
             if (response.status === 200) {
-                setAlert({ open: true, type: true, message: 'SignIn successfully!' });
-
-                const responseData = response.data.data; // user info
-                const token = response.data.token;       // token from top-level
+                const responseData = response.data.data;
+                const token = response.data.token;
 
                 // Store data in localStorage
                 localStorage.setItem('role', 'user');
@@ -110,13 +112,20 @@ const UserName = ({ onForgotPassword ,onUnblock }) => {
                 Cookies.set('employee_role', responseData.role_name, { expires: 1 });
                 Cookies.set('token', token, { expires: 1 });
 
-                // Redirect to dashboard
-                route.replace('/dashboard');
+                // Show success message
+                setAlert({ open: true, type: true, message: 'Login successful! Please verify OTP.' });
+
+                // Show OTP dialog instead of redirecting
+                setUserData({
+                    mobile: responseData.mobile,
+                    token: token
+                });
+                setShowOtpDialog(true);
+                
             } else {
                 setAlert({ open: true, type: false, message: response.data.message });
             }
         } catch (error) {
-            // Handle backend error
             if (error?.response?.status === 401) {
                 setAlert({ open: true, type: false, message: error.response.data.message });
             } else {
@@ -127,9 +136,84 @@ const UserName = ({ onForgotPassword ,onUnblock }) => {
         }
     };
 
+    // OTP Dialog Handlers
+    const handleVerifyOtp = async (otp) => {
+        setOtpLoading(true);
+        try {
+            console.log('Verifying OTP:', otp);
+            console.log('Mobile:', userData.mobile);
+            
+            // Add your OTP verification API call here
+            // Example:
+            // const verifyResponse = await api.post('/api/verify-otp', {
+            //     mobile: userData.mobile,
+            //     otp: otp,
+            //     token: userData.token
+            // });
+            
+            // Simulate API call delay
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            // For demo - assume OTP is correct
+            setAlert({ open: true, type: true, message: 'OTP verified successfully! Redirecting to dashboard...' });
+            setShowOtpDialog(false);
+            
+            // Store OTP verification status
+            localStorage.setItem('otp_verified', 'true');
+            Cookies.set('otp_verified', 'true', { expires: 1 });
+            
+            // Redirect to dashboard after successful OTP verification
+            setTimeout(() => {
+                route.replace('/dashboard');
+            }, 1500);
+            
+        } catch (error) {
+            setAlert({ open: true, type: false, message: 'OTP verification failed. Please try again.' });
+        } finally {
+            setOtpLoading(false);
+        }
+    };
+
+    const handleCloseOtp = () => {
+        console.log('OTP dialog closed');
+        setShowOtpDialog(false);
+        // User stays on login page
+    };
+
+    const handleChangeNumber = () => {
+        console.log('Change number requested');
+        setShowOtpDialog(false);
+        setUserData(null);
+        // Clear form and let user enter different credentials
+        setFormData({
+            mobileNumber: "",
+            password: ""
+        });
+        setAlert({ open: true, type: true, message: 'Please enter your credentials again.' });
+    };
+
+    const handleResendOtp = async () => {
+        try {
+            console.log('Resending OTP to:', userData.mobile);
+            // Add your resend OTP API call here
+            // await api.post('/api/resend-otp', {
+            //     mobile: userData.mobile,
+            //     token: userData.token
+            // });
+            
+            setAlert({ open: true, type: true, message: 'OTP sent successfully!' });
+        } catch (error) {
+            setAlert({ open: true, type: false, message: 'Failed to resend OTP. Please try again.' });
+        }
+    };
+
     const togglePasswordVisibility = () => {
         setShowPassword(prev => !prev);
     };
+
+    // For test numbers
+    const testNumbers = ['9096608606', '1111111111', '9284277924', '8306667760', '9922337928'];
+    const isTestNumber = userData ? testNumbers.includes(userData.mobile) : false;
 
     return (
         <>
@@ -223,9 +307,9 @@ const UserName = ({ onForgotPassword ,onUnblock }) => {
                             className={styles.loginButton}
                             sx={{
                                 minWidth: '120px',
-                                backgroundColor: '#1976d2', // Fresh blue color
+                                backgroundColor: '#1976d2',
                                 '&:hover': {
-                                    backgroundColor: '#1565c0', // Darker blue on hover
+                                    backgroundColor: '#1565c0',
                                 }
                             }}
                         >
@@ -244,7 +328,6 @@ const UserName = ({ onForgotPassword ,onUnblock }) => {
                                 Forgot Password?
                             </Typography>
                             <Typography className={styles.linkText}
-                            
                                 onClick={onUnblock}
                                 sx={{ cursor: 'pointer' }}
                             >
@@ -259,7 +342,7 @@ const UserName = ({ onForgotPassword ,onUnblock }) => {
                             Don't have an account?{" "}
                             <span
                                 style={{ color: "#2198F3", cursor: "pointer", fontWeight: "bold" }}
-                                onClick={handleSignUpClick} // Use the navigation function
+                                onClick={handleSignUpClick}
                             >
                                 Sign Up
                             </span>
@@ -267,6 +350,18 @@ const UserName = ({ onForgotPassword ,onUnblock }) => {
                     </Grid>
                 </Grid>
             </form>
+
+            {/* OTP Verification Dialog - Shows after successful login */}
+            <VerifyOtp
+                isOpen={showOtpDialog}
+                onClose={handleCloseOtp}
+                onVerify={handleVerifyOtp}
+                onChangeNumber={handleChangeNumber}
+                onResendOtp={handleResendOtp}
+                phoneNumber={userData?.mobile || ""}
+                isLoading={otpLoading}
+                isTestNumber={isTestNumber}
+            />
 
             {/* Alert Snackbar */}
             <Snackbar

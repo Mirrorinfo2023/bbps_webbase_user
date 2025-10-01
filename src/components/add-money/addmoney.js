@@ -20,66 +20,11 @@ import HistoryIcon from '@mui/icons-material/History';
 import AddIcon from '@mui/icons-material/Add';
 import Image from 'next/image';
 import styles from './AddMoneyRequestHistory.module.css';
+import { DataEncrypt, DataDecrypt } from '../../../utils/encryption';
+import api from '../../../utils/api';
 
 const steps = ['Amount', 'Method', 'Details', 'Confirm', 'Success'];
 
-const mockRequestHistory = [
-  {
-    id: 1,
-    orderId: 'ORD000001',
-    amount: 1000,
-    status: 'completed',
-    date: '2024-01-15',
-    time: '14:30:45',
-    utr: 'UTR123456789',
-    method: 'UPI Transfer',
-    timestamp: '2024-01-15T14:30:45Z'
-  },
-  {
-    id: 2,
-    orderId: 'ORD000002',
-    amount: 2500,
-    status: 'pending',
-    date: '2024-01-14',
-    time: '11:20:15',
-    utr: 'UTR987654321',
-    method: 'Bank Transfer',
-    timestamp: '2024-01-14T11:20:15Z'
-  },
-  {
-    id: 3,
-    orderId: 'ORD000003',
-    amount: 500,
-    status: 'Rejected',
-    date: '2024-01-13',
-    time: '09:45:30',
-    utr: 'UTR456789123',
-    method: 'UPI Transfer',
-    timestamp: '2024-01-13T09:45:30Z'
-  },
-  {
-    id: 4,
-    orderId: 'ORD000004',
-    amount: 5000,
-    status: 'Approved',
-    date: '2024-01-12',
-    time: '16:15:20',
-    utr: 'UTR789123456',
-    method: 'Bank Transfer',
-    timestamp: '2024-01-12T16:15:20Z'
-  },
-  {
-    id: 5,
-    orderId: 'ORD000005',
-    amount: 1500,
-    status: 'pending',
-    date: '2024-01-11',
-    time: '10:10:10',
-    utr: 'UTR159753468',
-    method: 'UPI Transfer',
-    timestamp: '2024-01-11T10:10:10Z'
-  }
-];
 
 export default function AddMoneyRequestHistory() {
     const [activeTab, setActiveTab] = useState(0);
@@ -90,7 +35,8 @@ export default function AddMoneyRequestHistory() {
     const [paymentMode, setPaymentMode] = useState('UPI');
     const [proof, setProof] = useState(null);
     const [loading, setLoading] = useState(false);
-
+    const [requestHistory, setRequestHistory] = useState([]);
+    const [loadingHistory, setLoadingHistory] = useState(false);
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
@@ -123,30 +69,221 @@ export default function AddMoneyRequestHistory() {
         }
     };
 
-    /** 🚀 API call for submitting add money request */
     const handleSubmitRequest = async () => {
         try {
             setLoading(true);
+
+            const userId = '123';
+
+            const requestData = {
+                user_id: userId,
+                amount: amount,
+                category: selectedMethod,
+                trans_no: utr,
+                // img: proof ? proof.name : null, // Remove this - file alag se append hoga
+                wallet: 'main'
+            };
+
+            // Encrypt the data using your encryption function
+            const encryptedData = DataEncrypt(JSON.stringify(requestData));
+
             const formData = new FormData();
-            formData.append('amount', amount);
-            formData.append('utr', utr);
-            formData.append('paymentMode', paymentMode);
-            formData.append('method', selectedMethod);
-            formData.append('proof', proof);
 
-            const res = await fetch('/api/add-money', {
-                method: 'POST',
-                body: formData
-            });
+            // Append encrypted data as 'data' field
+            formData.append('data', requestData);
 
-            if (!res.ok) throw new Error('Request failed');
-            goNext();
-        } catch (err) {
-            alert(err.message || 'Something went wrong!');
+            // Append image separately
+            if (proof) {
+                formData.append('img', proof); // File object directly append karein
+            }
+
+            console.log('📤 Sending Add Money Request:');
+            console.log('🔗 API Endpoint:', '/api/add_money/53aeb245864f03638400271b8a13ac38bad62be5');
+            console.log('👤 User ID:', userId);
+            console.log('📊 Original Request Data:', requestData);
+            console.log('🔐 Encrypted Data:', encryptedData);
+            console.log('🖼️ Proof File:', proof ? proof.name : 'No file');
+
+            // FormData content check karein
+            console.log('📋 FormData Contents:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`  ${key}:`, value);
+            }
+
+            // Make API call using FormData with proper headers
+            const response = await api.post(
+                '/api/add_money/53aeb245864f03638400271b8a13ac38bad62be5',
+                formData, // ✅ FormData object pass karein
+                {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        // Add other required headers if needed
+                        // 'Authorization': 'your-token-here',
+                        // 'apitoken': 'your-api-token-here'
+                    }
+                }
+            );
+
+            console.log('📥 Raw API Response:', response);
+            console.log('📥 Response Status:', response.status);
+            console.log('📥 Response Headers:', response.headers);
+
+            if (response.status >= 200 && response.status < 300) {
+                // Success response
+                let responseData = response.data;
+
+                console.log('✅ Raw Success Response:', responseData);
+
+                // Check if response is encrypted and needs decryption
+                if (typeof responseData === 'string') {
+                    try {
+                        responseData = DataDecrypt(responseData);
+                        console.log('✅ Decrypted Success Response:', responseData);
+                    } catch (decryptError) {
+                        console.log('⚠️ Response might not be encrypted or uses different format:', decryptError);
+                    }
+                }
+
+                if (responseData.success || responseData.status === 'success' || responseData.status === 200) {
+                    alert('💰 Add money request submitted successfully!');
+                    goNext();
+                } else {
+                    throw new Error(responseData.message || 'Request failed on server side');
+                }
+
+            } else {
+                throw new Error(`Request failed with status ${response.status}`);
+            }
+
+        } catch (error) {
+            console.error('❌ Add Money Request Error:', error);
+
+            // Enhanced error handling
+            if (error.response) {
+                // Server responded with error status
+                console.error('❌ Error Response Status:', error.response.status);
+                console.error('❌ Error Response Data:', error.response.data);
+                console.error('❌ Error Response Headers:', error.response.headers);
+
+                let errorMessage = 'Request failed';
+                let responseData = error.response.data;
+
+                // Try to decrypt error response if it's encrypted
+                if (typeof responseData === 'string') {
+                    try {
+                        responseData = DataDecrypt(responseData);
+                        console.error('❌ Decrypted Error Response:', responseData);
+                    } catch (decryptError) {
+                        console.log('⚠️ Error response might not be encrypted');
+                    }
+                }
+
+                if (error.response.status === 401) {
+                    errorMessage = 'Authentication failed. Please login again.';
+                    // Clear invalid token
+                    localStorage.removeItem('authToken');
+                    sessionStorage.removeItem('authToken');
+                    // router.push('/login');
+                } else if (error.response.status === 400) {
+                    errorMessage = responseData?.message || 'Invalid request data. Please check all fields.';
+                } else if (error.response.status === 500) {
+                    errorMessage = 'Server error. Please try again later.';
+                } else {
+                    errorMessage = responseData?.message || `Request failed with status ${error.response.status}`;
+                }
+
+                alert(errorMessage);
+
+            } else if (error.request) {
+                // Request was made but no response received
+                console.error('❌ No Response Received:', error.request);
+                alert('Network error: Please check your internet connection');
+            } else {
+                // Something else happened
+                console.error('❌ Error Message:', error.message);
+                alert(error.message || 'Something went wrong!');
+            }
         } finally {
             setLoading(false);
         }
     };
+    const fetchAddMoneyHistory = async () => {
+        try {
+            setLoadingHistory(true);
+            const userId = '34';
+            const payload = { user_id: userId, wallet: 'Main' };
+
+            console.log('Sending payload:', payload);
+
+            const encryptedPayload = { encReq: DataEncrypt(JSON.stringify(payload)) };
+            console.log('Encrypted payload:', encryptedPayload);
+
+            const response = await api.post(
+                '/api/add_money/098263ebb9bde3adcfc7761f4072b46c9fc7e9eb',
+                encryptedPayload,
+                { headers: { 'Content-Type': 'application/json' } }
+            );
+
+            console.log(' Raw API Response:', response);
+            console.log('Response Data Type:', typeof response.data);
+            console.log('Response Data:', response.data);
+
+            let responseData = response.data;
+
+            // Check if response is encrypted string
+            if (typeof responseData === 'string') {
+                try {
+                    console.log(' Decrypting response string...');
+                    responseData = DataDecrypt(responseData);
+                    console.log(' After decryption:', responseData);
+                    console.log('Type after decryption:', typeof responseData);
+
+                    // If DataDecrypt returns string, then parse it
+                    if (typeof responseData === 'string') {
+                        responseData = JSON.parse(responseData);
+                    }
+                    // If DataDecrypt already returns object, use it directly
+                    console.log(' Final response data:', responseData);
+                } catch (decryptError) {
+                    console.error('Decryption failed:', decryptError);
+                    // Try to parse as JSON directly
+                    try {
+                        responseData = JSON.parse(responseData);
+                    } catch (parseError) {
+                        console.error('JSON parse also failed:', parseError);
+                    }
+                }
+            }
+
+            console.log('Processed response data:', responseData);
+
+            if (responseData.status === 200) {
+                console.log(' History data received:', responseData.data);
+                setRequestHistory(responseData.data || []);
+            } else {
+                console.error('API returned error:', responseData.message);
+                setRequestHistory([]);
+            }
+
+        } catch (error) {
+            console.error('Fetch Add Money History Error:', error);
+            console.error('Error details:', {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status
+            });
+            setRequestHistory([]);
+        } finally {
+            setLoadingHistory(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 1) {
+            fetchAddMoneyHistory();
+        }
+    }, [activeTab]);
+
 
     return (
         <Box className={`
@@ -553,9 +690,8 @@ export default function AddMoneyRequestHistory() {
                                                         size="medium"
                                                     >
                                                         <MenuItem value="UPI">UPI</MenuItem>
-                                                        <MenuItem value="IMPS">IMPS</MenuItem>
-                                                        <MenuItem value="NEFT">NEFT</MenuItem>
-                                                        <MenuItem value="RTGS">RTGS</MenuItem>
+                                                        <MenuItem value="IMPS">Cash</MenuItem>
+                                                        <MenuItem value="NEFT">Cheque</MenuItem>
                                                     </Select>
                                                 </Grid>
                                             </Grid>
@@ -645,122 +781,71 @@ export default function AddMoneyRequestHistory() {
                     )}
 
                     {/* Request Status Tab Content */}
-                   {activeTab === 1 && (
-  <Box className={styles.historyContainer}>
-    <Typography variant="h4" className={styles.historyTitle}>
-      Add Money Request History
-    </Typography>
+                    {activeTab === 1 && (
+                        <Box className={styles.historyContainer}>
+                            <Typography variant="h4" className={styles.historyTitle}>
+                                Add Money Request History
+                            </Typography>
 
-    {mockRequestHistory.length === 0 ? (
-      <Box className={styles.emptyState}>
-        <HistoryIcon className={styles.emptyIcon} />
-        <Typography variant="h5" className={styles.emptyTitle}>
-          No Requests Found
-        </Typography>
-        <Typography variant="h6" color="text.secondary" className={styles.emptyMessage}>
-          You haven't made any add money requests yet.
-        </Typography>
-        <Button
-          variant="contained"
-          onClick={handleAddMoneyClick}
-          startIcon={<AddIcon />}
-          className={styles.primaryButton}
-          size="large"
-        >
-          Add Money Now
-        </Button>
-      </Box>
-    ) : (
-      <TableContainer component={Paper} className={styles.tableContainer}>
-        <Table>
-          <TableHead>
-            <TableRow className={styles.tableHeaderRow}>
-              <TableCell className={styles.tableHeaderCell}>
-                <Typography variant="h6" className={styles.columnTitle}>
-                  Order ID
-                </Typography>
-              </TableCell>
-              <TableCell className={styles.tableHeaderCell}>
-                <Typography variant="h6" className={styles.columnTitle}>
-                  Date & Time
-                </Typography>
-              </TableCell>
-              <TableCell className={styles.tableHeaderCell}>
-                <Typography variant="h6" className={styles.columnTitle}>
-                  UTR No
-                </Typography>
-              </TableCell>
-              <TableCell className={styles.tableHeaderCell}>
-                <Typography variant="h6" className={styles.columnTitle}>
-                  Amount
-                </Typography>
-              </TableCell>
-              <TableCell className={styles.tableHeaderCell}>
-                <Typography variant="h6" className={styles.columnTitle}>
-                  Status
-                </Typography>
-              </TableCell>
-             
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {mockRequestHistory.map((request) => (
-              <TableRow key={request.id} hover className={styles.tableRow}>
-                <TableCell className={styles.tableCell}>
-                  <Box className={styles.orderIdContainer}>
-                    <Typography variant="body1" className={styles.orderId}>
-                      #{request.id.toString().padStart(6, '0')}
-                    </Typography>
-                  </Box>
-                </TableCell>
-                <TableCell className={styles.tableCell}>
-                  <Box className={styles.datetimeContainer}>
-                    <Typography variant="body1" className={styles.date}>
-                      {request.date}
-                    </Typography>
-                    <Typography variant="body2" className={styles.time}>
-                      14:30:45
-                    </Typography>
-                  </Box>
-                </TableCell>
-                <TableCell className={styles.tableCell}>
-                  <Box className={styles.utrContainer}>
-                    <Typography variant="body2" className={styles.utrText}>
-                      {request.utr}
-                    </Typography>
-                    <Button 
-                      size="small" 
-                      className={styles.copyButton}
-                      onClick={() => navigator.clipboard.writeText(request.utr)}
-                    >
-                      Copy
-                    </Button>
-                  </Box>
-                </TableCell>
-                <TableCell className={styles.tableCell}>
-                  <Typography variant="h6" className={styles.amount}>
-                    ₹{request.amount.toLocaleString()}
-                  </Typography>
-                </TableCell>
-                <TableCell className={styles.tableCell}>
-                  <Box className={styles.statusContainer}>
-                    {getStatusChip(request.status)}
-                    {request.status === 'pending' && (
-                      <Typography variant="caption" className={styles.pendingTime}>
-                        Processing...
-                      </Typography>
+                            {loadingHistory ? (
+                                <Box className={styles.loaderContainer}>
+                                    <CircularProgress />
+                                </Box>
+                            ) : requestHistory.length === 0 ? (
+                                <Box className={styles.emptyState}>
+                                    <HistoryIcon className={styles.emptyIcon} />
+                                    <Typography variant="h5" className={styles.emptyTitle}>
+                                        No Requests Found
+                                    </Typography>
+                                    <Typography variant="h6" color="text.secondary" className={styles.emptyMessage}>
+                                        You haven't made any add money requests yet.
+                                    </Typography>
+                                    <Button
+                                        variant="contained"
+                                        onClick={handleAddMoneyClick}
+                                        startIcon={<AddIcon />}
+                                        className={styles.primaryButton}
+                                        size="large"
+                                    >
+                                        Add Money Now
+                                    </Button>
+                                </Box>
+                            ) : (
+                                <TableContainer component={Paper} className={styles.tableContainer}>
+                                    <Table>
+                                        <TableHead>
+                                            <TableRow className={styles.tableHeaderRow}>
+                                                <TableCell>Order ID</TableCell>
+                                                <TableCell>Date & Time</TableCell>
+                                                <TableCell>UTR No</TableCell>
+                                                <TableCell>Amount</TableCell>
+                                                <TableCell>Status</TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {requestHistory.map((request) => (
+                                                <TableRow key={request.id} hover>
+                                                    <TableCell>#{request.id.toString().padStart(6, '0')}</TableCell>
+                                                    <TableCell>
+                                                        {request.date} <br />
+                                                        <Typography variant="body2">{request.time}</Typography>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {request.utr}
+                                                        <Button size="small" onClick={() => navigator.clipboard.writeText(request.utr)}>
+                                                            Copy
+                                                        </Button>
+                                                    </TableCell>
+                                                    <TableCell>₹{request.amount.toLocaleString()}</TableCell>
+                                                    <TableCell>{getStatusChip(request.status)}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
+                            )}
+                        </Box>
                     )}
-                  </Box>
-                </TableCell>
-               
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    )}
-  </Box>
-)}
                 </Box>
             </Box>
         </Box>

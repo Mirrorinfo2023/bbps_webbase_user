@@ -17,39 +17,6 @@ import { styled } from "@mui/material/styles";
 import * as React from "react";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 
-// Dummy data for otpResult
-const dummyOtpResult = [
-  {
-    first_name: "John",
-    last_name: "Doe",
-    mlm_id: "MLM001",
-    mobile: "9876543210",
-    otp: "123456",
-    category: "Login",
-    status: 1,
-    otp_date: "2024-03-20 10:30 AM",
-  },
-  {
-    first_name: "Jane",
-    last_name: "Smith",
-    mlm_id: "MLM002",
-    mobile: "9876543211",
-    otp: "654321",
-    category: "Registration",
-    status: 0,
-    otp_date: "2024-03-20 11:45 AM",
-  },
-  {
-    first_name: "Mike",
-    last_name: "Johnson",
-    mlm_id: "MLM003",
-    mobile: "9876543212",
-    otp: "789012",
-    category: "Password Reset",
-    status: 1,
-    otp_date: "2024-03-20 12:15 PM",
-  },
-];
 
 const OtpTransactions = ({ showServiceTrans, searchTerm }) => {
   const rowsPerPageOptions = [5, 10, 25, 50];

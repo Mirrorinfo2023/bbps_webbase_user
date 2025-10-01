@@ -2,12 +2,12 @@
 
 import React from 'react';
 import Layout from '@/components/Dashboard/layout';
-import AddMoneys from '@/components/add-money/addmoneyhistory'; 
+import AddMoney from '@/components/add-money/addmoney'; 
 
-export default function addmoneyhistory() {
+export default function addmone() {
   return (
     <Layout>
-      <AddMoneys />
+      <AddMoney />
     </Layout>
   );
 }

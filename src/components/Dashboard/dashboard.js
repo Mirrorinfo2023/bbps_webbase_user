@@ -38,7 +38,6 @@ ChartJS.register(
   Legend
 );
 
-// ✅ Summary Cards Component
 function StatSummary({ stats, type = "user" }) {
   const statItems =
     type === "user"

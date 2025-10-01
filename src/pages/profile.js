@@ -81,15 +81,12 @@ export default function Profile() {
         lastName: '',
         pincode: '',
         state: '',        // could store state_id if available
-        state_id: '',     // add this
-        city: '',         // store city name
-        city_id: '',      // store city_id if API requires
+        city: '',
         postOfficeName: '',
         circle: '',
         district: '',
         division: '',
         region: '',
-        block: '',
         birthDate: null,
         gender: '',
         address: '',
@@ -126,6 +123,7 @@ export default function Profile() {
 
                 const user = profileDataDecrypted.data[0];
 
+                console.log("user ", user)
                 // ----------------- Fetch Wallet -----------------
                 const encWalletReq = DataEncrypt(JSON.stringify({ user_id: userId }));
                 const walletRes = await api.post(
@@ -134,6 +132,7 @@ export default function Profile() {
                     { headers: { "Content-Type": "application/json" } }
                 );
                 let walletDecrypted = DataDecrypt(walletRes.data);
+                console.log("walletDecrypted ", walletDecrypted)
                 if (typeof walletDecrypted === "string") walletDecrypted = JSON.parse(walletDecrypted);
 
                 // ----------------- Set User State -----------------
@@ -144,6 +143,8 @@ export default function Profile() {
                     mobile: user.mobile || '',
                     email: user.email || '',
                     refered_by: user.referred_by || '',
+                    ref_last_name: user.ref_last_name || '',
+                    ref_first_name: user.ref_first_name || '',
                     refered_mobile: user.ref_mobile || '',
                     rank: user.rank || '',
                     is_portfolio: user.is_portfolio || 0,
@@ -151,40 +152,77 @@ export default function Profile() {
                 });
 
                 // ----------------- Set Profile Form State -----------------
+                // After fetching user profile
                 setProfileData({
                     firstName: user.first_name || '',
                     lastName: user.last_name || '',
                     pincode: user.pincode || '',
                     state: user.state || '',
-                    state_id: user.state_id || '',
                     city: user.city || '',
-                    city_id: user.city_id || '',
                     postOfficeName: user.postOfficeName || '',
                     circle: user.circle || '',
                     district: user.district || '',
                     division: user.division || '',
                     region: user.region || '',
-                    block: user.block || '',
-                    birthDate: user.dob ? new Date(user.dob) : null,
-                    gender: user.gender || '',
                     address: user.address || '',
+                    birthDate: user.dob ? new Date(user.dob) : null,
+                    gender: user.gender || '',  // ⚡ important for Select
                     aniversary_date: user.aniversary_date ? new Date(user.aniversary_date) : null,
-                    profile_pic_file: null // for file upload
+                    profile_pic_file: null,
+                    profile_pic_preview: user.profile_pic || null
                 });
+
 
                 // ----------------- Set Balance State -----------------
                 setBalance({
                     wallet: walletDecrypted.walletBalance || 0,
-                    cashback: user.cashback_balance || 0,
-                    totalCashback: profileDataDecrypted.total_earning || 0,
-                    referralPoints: profileDataDecrypted.total_referral || 0,
+                    cashback: walletDecrypted.cashbackBalance || 0,
+                    totalCashback: walletDecrypted.total_earning || 0,
+                    referralPoints: walletDecrypted.affiliateBalance || 0,
                     affiliateBalance: walletDecrypted.affiliateBalance || 0,
                     affiliateIncome: walletDecrypted.affiliateIncome || 0,
                     todayIncome: walletDecrypted.today_income || 0,
-                    primeBalance: user.prime_balance || 0,
+                    primeBalance: walletDecrypted.primeBalance || 0,
                     epinWallet: walletDecrypted.epinWalletBalance || 0,
-                    voucher: walletDecrypted.voucher || 0
+                    voucher: walletDecrypted.voucher || 0,
+                    rank: walletDecrypted.rank || user.rank || '' // fallback to profile rank
                 });
+                // ----------------- Fetch Pincode Info if available -----------------
+                if (user.pincode) {
+                    const encReq = DataEncrypt(JSON.stringify({ pincode: user.pincode }));
+                    const res = await api.post(
+                        "/api/pincode/916e4eb592f2058c43a3face75b0f9d49ef2bd17",
+                        { encReq },
+                        { headers: { "Content-Type": "application/json" } }
+                    );
+
+                    let decrypted = DataDecrypt(res.data);
+                    if (typeof decrypted === 'string') decrypted = JSON.parse(decrypted);
+
+                    if (decrypted.status === 200 && decrypted.data.length > 0) {
+                        const pincodeInfo = decrypted.data[0];
+
+                        const fullAddress = [
+                            pincodeInfo.Office_name,
+                            pincodeInfo.Division,
+                            pincodeInfo.District,
+                            pincodeInfo.State,
+                            pincodeInfo.Pincode
+                        ].filter(Boolean).join(', ');
+
+                        setProfileData(prev => ({
+                            ...prev,
+                            state: pincodeInfo.State || '',
+                            city: pincodeInfo.District || '',
+                            circle: pincodeInfo.Circle || '',
+                            division: pincodeInfo.Division || '',
+                            postOfficeName: pincodeInfo.Office_name || '',
+                            region: pincodeInfo.Region || '',
+                            address: fullAddress || '',
+                        }));
+                    }
+                }
+
 
                 // ----------------- Update sessionStorage -----------------
                 Object.entries(user).forEach(([key, value]) => {
@@ -229,16 +267,12 @@ export default function Profile() {
 
             const payload = {
                 user_id: userId,
-                country_id: profileData.country_id || null,
-                state_id: profileData.state_id || null,
-                city_id: profileData.city_id || null,
                 pincode: profileData.pincode || '',
                 postOfficeName: profileData.postOfficeName || '',
                 circle: profileData.circle || '',
                 district: profileData.district || '',
                 division: profileData.division || '',
                 region: profileData.region || '',
-                block: profileData.block || '',
                 dob: profileData.birthDate ? profileData.birthDate.toISOString().split('T')[0] : null,
                 address: profileData.address || '',
                 aniversary_date: profileData.aniversary_date || null,
@@ -263,8 +297,11 @@ export default function Profile() {
             } else {
                 // File exists → send FormData
                 const formData = new FormData();
-                formData.append('file', profileData.profile_pic_file);
-                Object.entries(payload).forEach(([key, value]) => formData.append(key, value ?? ''));
+                formData.append("img", profileData.profile_pic_file);  // 👈 must match backend
+
+                Object.entries(payload).forEach(([key, value]) =>
+                    formData.append(key, value ?? "")
+                );
 
                 // Debug log FormData
                 for (let pair of formData.entries()) {
@@ -273,8 +310,7 @@ export default function Profile() {
 
                 const res = await api.post(
                     '/api/users/978d91c8d62d882a00631e74fa6c6863616ebc13',
-                    formData,
-                    { headers: { 'Content-Type': 'multipart/form-data' } }
+                    formData
                 );
                 const data = res.data;
                 if (data.status === 200) {
@@ -290,10 +326,6 @@ export default function Profile() {
             alert("Something went wrong while updating profile.");
         }
     };
-
-
-
-
 
     const handleInputChange = (field) => (event) => {
         setProfileData(prev => ({
@@ -329,15 +361,29 @@ export default function Profile() {
                 let decrypted = DataDecrypt(res.data);
                 if (typeof decrypted === 'string') decrypted = JSON.parse(decrypted);
 
+                console.log("decrypted ", decrypted);
                 if (decrypted.status === 200 && decrypted.data.length > 0) {
                     const pincodeInfo = decrypted.data[0]; // first item in array
+
+                    // Build full address string
+                    const fullAddress = [
+                        pincodeInfo.Office_name,
+                        pincodeInfo.Division,
+                        pincodeInfo.District,
+                        pincodeInfo.State,
+                        pincodeInfo.Pincode
+                    ].filter(Boolean).join(', ');
+
                     setProfileData(prev => ({
                         ...prev,
+                        pincode: pincodeInfo.Pincode || prev.pincode,
                         state: pincodeInfo.State || '',
                         city: pincodeInfo.District || '',
                         circle: pincodeInfo.Circle || '',
                         division: pincodeInfo.Division || '',
-                        office_name: pincodeInfo.Office_name || ''
+                        office_name: pincodeInfo.Office_name || '',
+                        region: pincodeInfo.Region || '',
+                        address: fullAddress
                     }));
                 } else {
                     console.error("Pincode API returned error:", decrypted.message);
@@ -348,43 +394,8 @@ export default function Profile() {
         }
     };
 
-    const handleDeactivateAccount = async () => {
-        const confirm = window.confirm("Are you sure you want to deactivate your account?");
-        if (!confirm) return;
+    console.log("profileData.state ", profileData.state)
 
-        try {
-            const userId = sessionStorage.getItem('id'); // Or from your state
-            if (!userId) return alert("User not found!");
-
-            const payload = {
-                user_id: userId,
-                status: 0,
-                reason: profileData.deactivateReason || ''
-            };
-
-            const encReq = DataEncrypt(JSON.stringify(payload));
-
-            const res = await api.post(
-                "/api/users/2f1152a7869df19b1a583f4a971291ddcf413ce3",
-                { encReq }
-            );
-
-            let decrypted = DataDecrypt(res.data);
-            if (typeof decrypted === 'string') decrypted = JSON.parse(decrypted);
-
-            if (decrypted.status === 200) {
-                alert("Account deactivated successfully!");
-                // Logout user and redirect
-                sessionStorage.clear();
-                window.location.href = '/login';
-            } else {
-                alert("Failed to deactivate account: " + decrypted.message);
-            }
-        } catch (err) {
-            console.error("Deactivate account error:", err);
-            alert("Something went wrong while deactivating your account.");
-        }
-    };
     const handleLogout = () => {
         setAnchorEl(null);
 
@@ -479,8 +490,8 @@ export default function Profile() {
                                     justifyContent: 'center'
                                 }}
                             >
-                                <Typography variant="body2">Referred By: {userData.refered_by}</Typography>
-                                <Typography variant="body2">{userData.refered_mobile}</Typography>
+                                <Typography variant="body2">Referred By: {userData.ref_first_name}{" "}{userData.ref_last_name}</Typography>
+                                <Typography variant="body2">Mobile:  {userData.refered_mobile}</Typography>
 
                             </Grid>
                         </Grid>
@@ -589,7 +600,7 @@ export default function Profile() {
 
                                             {/* Birth Date */}
                                             <Grid item xs={12} sm={6}>
-                                                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                                                <LocalizationProvider dateAdapter={AdapterDateFns}> 
                                                     <DatePicker
                                                         label="Birth Date"
                                                         value={profileData.birthDate}
@@ -597,9 +608,9 @@ export default function Profile() {
                                                         renderInput={(params) => (
                                                             <TextField
                                                                 {...params}
-                                                                size="small"
-                                                                fullWidth
-                                                                sx={{ backgroundColor: '#f9f9f9', borderRadius: 1, width: "100%" }}
+                                                                size="medium"
+                                                                fullWidth  // make sure this is here
+                                                                sx={{ backgroundColor: '#f9f9f9', borderRadius: 1,}}
                                                                 InputProps={{
                                                                     ...params.InputProps,
                                                                     startAdornment: (
@@ -613,6 +624,7 @@ export default function Profile() {
                                                     />
                                                 </LocalizationProvider>
                                             </Grid>
+
 
                                             {/* Gender */}
                                             <Grid item xs={12} sm={6}>

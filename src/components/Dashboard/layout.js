@@ -42,30 +42,30 @@ const drawerWidth = 200;
 let menuArray = [
   { redirect: 'dashboard', name: 'Dashboard', parent: 'dashboard', icon: <DashboardIcon sx={{ fontSize: 20 }} /> },
   { redirect: '#', name: 'Masters', parent: 'masters', icon: <WidgetsIcon sx={{ fontSize: 20 }} /> },
-  { redirect: '#', name: 'Affilate', parent: 'networking', icon: <PeopleIcon sx={{ fontSize: 20 }} /> },
-  { redirect: '#', name: 'Wallet', parent: 'wallet', icon: <AccountBalanceWalletIcon sx={{ fontSize: 20 }} /> },
-  { redirect: '#', name: 'Marketing', parent: 'marketing', icon: <CampaignIcon sx={{ fontSize: 20 }} /> },
+  // { redirect: '#', name: 'Affilate', parent: 'networking', icon: <PeopleIcon sx={{ fontSize: 20 }} /> },
+  // { redirect: '#', name: 'Wallet', parent: 'wallet', icon: <AccountBalanceWalletIcon sx={{ fontSize: 20 }} /> },
+  // { redirect: '#', name: 'Marketing', parent: 'marketing', icon: <CampaignIcon sx={{ fontSize: 20 }} /> },
   // { redirect: '#', name: 'Recharge/Payment', parent: 'recharge', icon: <PaymentIcon sx={{ fontSize: 20 }} /> },
   // { redirect: '#', name: 'Staff', parent: 'staff', icon: <PeopleIcon sx={{ fontSize: 20 }} /> },
   // { redirect: '#', name: 'Investment', parent: 'investment', icon: <PeopleIcon sx={{ fontSize: 20 }} /> },
-  { redirect: '#', name: 'Settings', parent: 'setting', icon: <SettingsIcon sx={{ fontSize: 20 }} /> }
+  // { redirect: '#', name: 'Settings', parent: 'setting', icon: <SettingsIcon sx={{ fontSize: 20 }} /> }
 ]
 
 let menuArray1 = [
 
-  { redirect: 'get-banners', name: 'Banners', parent: 'masters' },
-  // { redirect: 'leads-category', name: 'Lead Category', parent: 'masters' },
-  // { redirect: 'leads-report', name: 'Lead List', parent: 'masters' },
+  { redirect: 'add-money', name: 'add money', parent: 'masters' },
+  { redirect: 'id-activation', name: 'ID Activation', parent: 'masters' },
+  { redirect: 'redeem', name: 'Reedeem', parent: 'masters' },
   // { redirect: 'leads-user-action-report', name: 'Leads User Action Report', parent: 'masters' },
   // { redirect: 'leads-user-form-request-list', name: 'Leads User Form Report', parent: 'masters' },
   // { redirect: 'leads-user-track-report', name: 'Leads User Track Report', parent: 'masters' },
   // { redirect: 'graphics-report', name: 'Marketing Report', parent: 'masters' },
   // { redirect: 'meeting', name: 'Meeting Report', parent: 'masters' },
-  { redirect: 'get-meeting-enroll-report', name: 'Meeting Enroll Report', parent: 'masters' },
+  // { redirect: 'get-meeting-enroll-report', name: 'Meeting Enroll Report', parent: 'masters' },
   // { redirect: 'product-list', name: 'Product List', parent: 'masters' },
-  { redirect: 'profit-return', name: 'Profit Return', parent: 'masters' },
-   { redirect: 'massage-setting', name: 'Massage Setting', parent: 'masters' },
-  { redirect: 'slab-setting', name: 'marketing', parent: 'masters' }
+  // { redirect: 'profit-return', name: 'Profit Return', parent: 'masters' },
+  //  { redirect: 'massage-setting', name: 'Massage Setting', parent: 'masters' },
+  // { redirect: 'slab-setting', name: 'marketing', parent: 'masters' }
 ];
 
 let menuArray2 = [
@@ -270,7 +270,6 @@ function Layout(props) {
     router.push('/login');
 
   };
-
 
   const renderMenu = (menuArray) => {
     return (
@@ -636,7 +635,6 @@ function Layout(props) {
             >
               Profile
             </MenuItem>
-
             <MenuItem sx={{ py: 1, px: 2 }}>
               <Link style={{ textDecoration: 'none', color: 'inherit' }} href={`/reset-password`}>
                 Reset Password

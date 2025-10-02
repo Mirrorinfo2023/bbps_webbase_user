@@ -9,7 +9,7 @@ const VerifyOtp = ({
   onVerify, 
   onChangeNumber, 
   onResendOtp,
-  phoneNumber = "+1 (234) 567-8900",
+  phoneNumber ,
   isLoading = false,
   isTestNumber = false
 }) => {

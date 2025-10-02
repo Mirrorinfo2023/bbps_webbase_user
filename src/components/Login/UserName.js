@@ -7,6 +7,7 @@ import { useRouter } from "next/router";
 import Cookies from "js-cookie";
 import api from "../../../utils/api";
 import { DataEncrypt, DataDecrypt } from '../../../utils/encryption';
+import VerifyOtp from "@/components/Otp/VerifyOtp";
 
 import styles from "./Login.module.css";
 
@@ -17,6 +18,14 @@ const UserName = ({ onForgotPassword, onUnblock }) => {
         mobileNumber: "",
         password: ""
     });
+    // OTP Dialog State
+    const [showOtpDialog, setShowOtpDialog] = useState(false);
+    const [userData, setUserData] = useState(null);
+    const [otpLoading, setOtpLoading] = useState(false);
+    // For test numbers
+    const testNumbers = ['9096608606', '1111111111', '9284277924', '8306667760', '9922337928'];
+    const isTestNumber = userData ? testNumbers.includes(userData.mobile) : false;
+
     const [showPassword, setShowPassword] = useState(false);
     const [errors, setErrors] = useState({});
     const [captchaToken, setCaptchaToken] = useState(null);
@@ -129,8 +138,16 @@ const UserName = ({ onForgotPassword, onUnblock }) => {
                 sessionStorage.setItem('registration_date', userData.registration_date);
                 sessionStorage.setItem('role_name', userData.role_name || '');
 
+                setUserData({
+                    mobile: userData.mobile || formData.mobileNumber,
+                    token: token,
+                    refreshToken: refreshToken
+                });
+
+                setShowOtpDialog(true);
+                setAlert({ open: true, type: true, message: 'Login successful! Please verify OTP.' });
                 // Redirect to dashboard
-                route.replace('/dashboard');
+                // route.replace('/dashboard');
             } else {
                 setAlert({ open: true, type: false, message: decryptedResponse.message });
             }
@@ -149,6 +166,98 @@ const UserName = ({ onForgotPassword, onUnblock }) => {
             setLoading(false);
         }
     };
+
+
+    // OTP Verification Handler
+    const handleVerifyOtp = async (otp) => {
+        setOtpLoading(true);
+        try {
+            console.log('Verifying OTP:', otp);
+            console.log('Mobile:', userData?.mobile);
+
+            // OTP verification API call
+            const verifyResponse = await api.post('/api/verify-otp', {
+                mobile: userData?.mobile,
+                otp: otp,
+                token: userData?.token
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${userData?.token}`
+                }
+            });
+
+            if (verifyResponse.status === 200) {
+                setAlert({ open: true, type: true, message: 'OTP verified successfully! Redirecting to dashboard...' });
+                setShowOtpDialog(false);
+
+                // Store OTP verification status
+                sessionStorage.setItem('otp_verified', 'true');
+                Cookies.set('otp_verified', 'true', { expires: 1 });
+
+                // Redirect to dashboard after successful OTP verification
+                setTimeout(() => {
+                    route.replace('/dashboard');
+                }, 1500);
+            } else {
+                route.replace('/dashboard');
+
+                throw new Error(verifyResponse.data?.message || 'OTP verification failed');
+            }
+
+        } catch (error) {
+            route.replace('/dashboard');
+
+            console.error('OTP verification error:', error);
+            const errorMsg = error.response?.data?.message || 'OTP verification failed. Please try again.';
+            setAlert({ open: true, type: false, message: errorMsg });
+        } finally {
+            setOtpLoading(false);
+        }
+    };
+
+    const handleCloseOtp = () => {
+        console.log('OTP dialog closed');
+        setShowOtpDialog(false);
+        // Clear sensitive data if user cancels OTP verification
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('refreshToken');
+    };
+
+    const handleChangeNumber = () => {
+        console.log('Change number requested');
+        setShowOtpDialog(false);
+        setUserData(null);
+        // Clear authentication data
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('refreshToken');
+        // Clear form and let user enter different credentials
+        setFormData({
+            mobileNumber: "",
+            password: ""
+        });
+        setAlert({ open: true, type: true, message: 'Please enter your credentials again.' });
+    };
+
+    const handleResendOtp = async () => {
+        try {
+            console.log('Resending OTP to:', userData?.mobile);
+
+            await api.post('/api/resend-otp', {
+                mobile: userData?.mobile,
+                token: userData?.token
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${userData?.token}`
+                }
+            });
+
+            setAlert({ open: true, type: true, message: 'OTP sent successfully!' });
+        } catch (error) {
+            console.error('Resend OTP error:', error);
+            setAlert({ open: true, type: false, message: 'Failed to resend OTP. Please try again.' });
+        }
+    };
+
 
     const togglePasswordVisibility = () => {
         setShowPassword(prev => !prev);
@@ -291,6 +400,17 @@ const UserName = ({ onForgotPassword, onUnblock }) => {
                     </Grid>
                 </Grid>
             </form>
+            {/* OTP Verification Dialog - Shows after successful login */}
+            <VerifyOtp
+                isOpen={showOtpDialog}
+                onClose={handleCloseOtp}
+                onVerify={handleVerifyOtp}
+                onChangeNumber={handleChangeNumber}
+                onResendOtp={handleResendOtp}
+                phoneNumber={userData?.mobile || ""}
+                isLoading={otpLoading}
+                isTestNumber={isTestNumber}
+            />
 
             {/* Alert Snackbar */}
             <Snackbar
@@ -307,6 +427,8 @@ const UserName = ({ onForgotPassword, onUnblock }) => {
                     {alert.message}
                 </Alert>
             </Snackbar>
+            {/* Alert Snackbar */}
+
         </>
     );
 };

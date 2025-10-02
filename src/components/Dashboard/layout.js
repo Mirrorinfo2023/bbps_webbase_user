@@ -55,7 +55,7 @@ let menuArray1 = [
 
   { redirect: 'add-money', name: 'add money', parent: 'masters' },
   { redirect: 'id-activation', name: 'ID Activation', parent: 'masters' },
-  { redirect: 'redeem', name: 'Reedeem', parent: 'masters' },
+  { redirect: 'redeem', name: 'Redeem', parent: 'masters' },
   // { redirect: 'leads-user-action-report', name: 'Leads User Action Report', parent: 'masters' },
   // { redirect: 'leads-user-form-request-list', name: 'Leads User Form Report', parent: 'masters' },
   // { redirect: 'leads-user-track-report', name: 'Leads User Track Report', parent: 'masters' },

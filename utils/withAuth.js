@@ -1,27 +1,27 @@
 // utils/withAuth.js
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import Cookies from 'js-cookie'
-
-const checkCookies = (context) => {
-  const uid = context.req ? Cookies.get('uid', { headers: context.req.headers }) : Cookies.get('uid')
-  const role = context.req ? Cookies.get('role', { headers: context.req.headers }) : Cookies.get('role')
-  return { uid, role }
-}
 
 const withAuth = (WrappedComponent) => {
   return (props) => {
     const router = useRouter()
+    const [loading, setLoading] = useState(true)
 
     useEffect(() => {
+      // Client-side only
+      const uid = Cookies.get('uid') || sessionStorage.getItem('id')
+      const role = Cookies.get('role') || sessionStorage.getItem('role')
 
-      const { uid, role } = checkCookies({ req: typeof window === 'undefined' ? ctx.req : undefined })
-      // Check if cookies are available, and if not, redirect to the login page
-      if ((!uid && !router.pathname.includes('/login')) || role !== 'user') {
-        router.push('/login')
+      if (!uid || role !== 'user') {
+        router.replace('/login')
+      } else {
+        setLoading(false) // user is authenticated
       }
-
     }, [])
+
+    // Show nothing while checking auth
+    if (loading) return null
 
     return <WrappedComponent {...props} />
   }

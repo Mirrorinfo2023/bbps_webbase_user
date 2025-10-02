@@ -89,7 +89,7 @@ const UserName = ({ onForgotPassword, onUnblock }) => {
                 captchaToken
             };
 
-            const response = await api.post('/api/users/admin_login', reqData);
+            const response = await api.post('/api/users/login', reqData);
             console.log("Login response:", response);
 
             if (response.status === 200) {

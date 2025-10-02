@@ -8,7 +8,6 @@ import {
   Button,
   Chip,
   Divider,
-  Paper,
   Container,
   AppBar,
   Toolbar,
@@ -51,6 +50,7 @@ const StatsCard = ({ title, value, subtitle }) => {
     </Card>
   );
 };
+
 // Cashback Category Component
 const CashbackCategory = ({ percentage, category, description, icon, gradient }) => {
   return (
@@ -169,114 +169,6 @@ const CashbackCategory = ({ percentage, category, description, icon, gradient })
   );
 };
 
-// Updated cashback data with all categories
-const cashbackData = [
-  { 
-    percentage: "5%", 
-    category: "Recharge & Bills", 
-    description: "Loan EMI, Electricity, Rent Credit card",
-    icon: <AccountBalanceWallet sx={{ fontSize: 'inherit' }} />,
-    gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-  },
-  { 
-    percentage: "10%", 
-    category: "Shopping", 
-    description: "Online purchase, Fashion, electronics",
-    icon: <ShoppingCart sx={{ fontSize: 'inherit' }} />,
-    gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
-  },
-  { 
-    percentage: "20%", 
-    category: "Leads", 
-    description: "Business leads and opportunities",
-    icon: <BusinessCenterIcon sx={{ fontSize: 'inherit' }} />,
-    gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
-  },
-  { 
-    percentage: "5%", 
-    category: "E-book", 
-    description: "Digital book purchases, Free Kindle Books",
-    icon: <Book sx={{ fontSize: 'inherit' }} />,
-    gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
-  },
-  { 
-    percentage: "10%", 
-    category: "Insurance & Loan", 
-    description: "Health, Life Vehicle insurance",
-    icon: <Campaign sx={{ fontSize: 'inherit' }} />,
-    gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
-  },
-  { 
-    percentage: "0.5%", 
-    category: "Commute", 
-    description: "FAST tag, metro, transportation",
-    icon: <DirectionsCar sx={{ fontSize: 'inherit' }} />,
-    gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)'
-  },
-  { 
-    percentage: "20%", 
-    category: "Affiliate", 
-    description: "Affiliate marketing earnings",
-    icon: <Campaign sx={{ fontSize: 'inherit' }} />,
-    gradient: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)'
-  }
-];
-
-// Usage in main component
-const CashbackSection = () => {
-  return (
-    <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
-      <CardContent sx={{ p: 4 }}>
-        <Typography 
-          variant="h4" 
-          gutterBottom 
-          sx={{ 
-            fontWeight: 700, 
-            mb: 4,
-            textAlign: 'center',
-            background: 'linear-gradient(45deg, #667eea, #764ba2)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            color: 'transparent'
-          }}
-        >
-          Cashback Categories
-        </Typography>
-        <Grid container spacing={3}>
-          {cashbackData.map((item, index) => (
-            <Grid item xs={12} sm={6} md={4} key={index}>
-              <CashbackCategory
-                percentage={item.percentage}
-                category={item.category}
-                description={item.description}
-                icon={item.icon}
-                gradient={item.gradient}
-              />
-            </Grid>
-          ))}
-        </Grid>
-        
-        {/* Summary Section */}
-        <Box sx={{ 
-          mt: 4, 
-          p: 3, 
-          borderRadius: 3,
-          background: 'linear-gradient(135deg, rgba(102,126,234,0.1) 0%, rgba(118,75,162,0.1) 100%)',
-          border: '1px solid rgba(102,126,234,0.2)',
-          textAlign: 'center'
-        }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main', mb: 1 }}>
-            Maximize Your Earnings
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary', opacity: 0.8 }}>
-            Earn cashback on every transaction across all categories
-          </Typography>
-        </Box>
-      </CardContent>
-    </Card>
-  );
-};
-
 // Wallet Section Component
 const WalletSection = () => {
   return (
@@ -294,7 +186,7 @@ const WalletSection = () => {
                 Wallet Point
               </Typography>
               <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                 0.0
+                0.0
               </Typography>
             </Box>
           </Grid>
@@ -305,7 +197,7 @@ const WalletSection = () => {
                 Cashback Point
               </Typography>
               <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                 0.0
+                0.0
               </Typography>
             </Box>
           </Grid>
@@ -649,11 +541,57 @@ const UnlockedSection = () => {
 
 // Main Dashboard Component
 const Dashboard = () => {
+  // Complete cashback data with all categories
   const cashbackData = [
-    { percentage: "5%", category: "E-book", description: "Digital book purchases", icon: <Book /> },
-    { percentage: "10%", category: "Insurance & Loan", description: "Health, Life Vehicle", icon: <AccountBalanceWallet /> },
-    { percentage: "0.5%", category: "Commute", description: "FAST tag, metro", icon: <DirectionsCar /> },
-    { percentage: "20%", category: "Affiliates", description: "Affiliate marketing earnings", icon: <Campaign /> }
+    { 
+      percentage: "5%", 
+      category: "Recharge & Bills", 
+      description: "Loan EMI, Electricity, Rent Credit card",
+      icon: <AccountBalanceWallet sx={{ fontSize: 'inherit' }} />,
+      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    },
+    { 
+      percentage: "10%", 
+      category: "Shopping", 
+      description: "Online purchase, Fashion, electronics",
+      icon: <ShoppingCart sx={{ fontSize: 'inherit' }} />,
+      gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+    },
+    { 
+      percentage: "20%", 
+      category: "Leads", 
+      description: "Business leads and opportunities",
+      icon: <BusinessCenterIcon sx={{ fontSize: 'inherit' }} />,
+      gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+    },
+    { 
+      percentage: "5%", 
+      category: "E-book", 
+      description: "Digital book purchases, Free Kindle Books",
+      icon: <Book sx={{ fontSize: 'inherit' }} />,
+      gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+    },
+    { 
+      percentage: "10%", 
+      category: "Insurance & Loan", 
+      description: "Health, Life Vehicle insurance",
+      icon: <Campaign sx={{ fontSize: 'inherit' }} />,
+      gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
+    },
+    { 
+      percentage: "0.5%", 
+      category: "Commute", 
+      description: "FAST tag, metro, transportation",
+      icon: <DirectionsCar sx={{ fontSize: 'inherit' }} />,
+      gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)'
+    },
+    { 
+      percentage: "20%", 
+      category: "Affiliate", 
+      description: "Affiliate marketing earnings",
+      icon: <Campaign sx={{ fontSize: 'inherit' }} />,
+      gradient: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)'
+    }
   ];
 
   return (
@@ -691,21 +629,51 @@ const Dashboard = () => {
               <Grid item xs={12}>
                 <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
                   <CardContent sx={{ p: 4 }}>
-                    <Typography variant="h4" gutterBottom sx={{ fontWeight: 600, mb: 4 }}>
+                    <Typography 
+                      variant="h4" 
+                      gutterBottom 
+                      sx={{ 
+                        fontWeight: 700, 
+                        mb: 4,
+                        textAlign: 'center',
+                        background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text',
+                        color: 'transparent'
+                      }}
+                    >
                       Cashback Categories
                     </Typography>
                     <Grid container spacing={3}>
                       {cashbackData.map((item, index) => (
-                        <Grid item xs={12} sm={6} key={index}>
+                        <Grid item xs={12} sm={6} md={4} key={index}>
                           <CashbackCategory
                             percentage={item.percentage}
                             category={item.category}
                             description={item.description}
                             icon={item.icon}
+                            gradient={item.gradient}
                           />
                         </Grid>
                       ))}
                     </Grid>
+                    
+                    {/* Summary Section */}
+                    <Box sx={{ 
+                      mt: 4, 
+                      p: 3, 
+                      borderRadius: 3,
+                      background: 'linear-gradient(135deg, rgba(102,126,234,0.1) 0%, rgba(118,75,162,0.1) 100%)',
+                      border: '1px solid rgba(102,126,234,0.2)',
+                      textAlign: 'center'
+                    }}>
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main', mb: 1 }}>
+                        Maximize Your Earnings
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'text.secondary', opacity: 0.8 }}>
+                        Earn cashback on every transaction across all categories
+                      </Typography>
+                    </Box>
                   </CardContent>
                 </Card>
               </Grid>
@@ -732,7 +700,7 @@ const Dashboard = () => {
         {/* Footer Section */}
         <Box sx={{ textAlign: 'center', mt: 8, mb: 4 }}>
           <Typography variant="h3" gutterBottom sx={{ fontWeight: 700, color: 'primary.main' }}>
-            What makes online brib the
+            What makes online users the best
           </Typography>
           <Typography variant="h2" sx={{ fontWeight: 800, color: 'text.primary' }}>
             Over 0+

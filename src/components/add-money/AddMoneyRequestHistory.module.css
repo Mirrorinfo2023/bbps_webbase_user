@@ -57,7 +57,7 @@
 
 .headerIcon {
   font-size: 64px !important;
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
 }
 
 .mobile .headerIcon {
@@ -196,6 +196,7 @@
   font-size: 1.3rem !important;
   min-width: 200px !important;
 }
+
 .navButton {
   border-radius: 16px !important;
   padding: 16px 32px !important;
@@ -275,7 +276,7 @@
 }
 
 .largeScreen .mainContent {
-  padding: 48px 60px;
+  padding: 4px 40px;
 }
 
 /* Add Money Content */
@@ -300,8 +301,8 @@
 }
 
 .desktop .stepperContainer {
-  padding: 40px 50px;
-  margin-bottom: 40px;
+  padding: 4px;
+  margin-bottom: 4px;
 }
 
 .stepper {
@@ -346,7 +347,7 @@
 }
 
 .largeScreen .stepCardContent {
-  padding: 56px !important;
+  padding: 16px !important;
 }
 
 /* Step Content */
@@ -378,7 +379,7 @@
 }
 
 .desktop .stepTitle {
-  margin-bottom: 40px;
+  margin-bottom: 9px;
   font-size: 2rem;
 }
 
@@ -392,7 +393,7 @@
 }
 
 .desktop .amountInput {
-  margin-bottom: 48px !important;
+  margin-bottom: 4px !important;
 }
 
 .quickSelectLabel {
@@ -407,7 +408,7 @@
 }
 
 .desktop .quickSelectLabel {
-  margin-bottom: 32px !important;
+  margin-bottom: 2px !important;
   font-size: 1.3rem;
 }
 
@@ -636,14 +637,14 @@
 }
 
 .bankIcon {
-  font-size: 80px !important;
+  font-size: 38px !important;
   color: #1976d2;
-  margin-bottom: 24px;
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+  margin-bottom: 2px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
 }
 
 .desktop .bankIcon {
-  font-size: 96px !important;
+  font-size: 38px !important;
   margin-bottom: 32px;
 }
 
@@ -679,12 +680,12 @@
 }
 
 .desktop .amountText {
-  font-size: 4rem;
+  font-size: 1rem;
 }
 
 .uploadLabel {
   display: block;
-  margin-bottom: 32px;
+  margin-bottom: 12px;
 }
 
 .uploadButton {
@@ -709,8 +710,8 @@
 }
 
 .desktop .uploadButton {
-  padding: 24px 40px;
-  font-size: 1.3rem;
+  padding: 2px;
+  font-size: 1.2rem;
 }
 
 .fileInfo {
@@ -723,7 +724,7 @@
 
 /* Button Container */
 .buttonContainer {
-  margin-top: auto;
+  margin-top: 5px;
   width: 100%;
 }
 
@@ -754,14 +755,14 @@
 }
 
 .desktop .primaryButton {
-  padding: 24px 48px;
-  font-size: 1.4rem;
-  border-radius: 24px;
+  padding: 2px;
+  font-size: 1rem;
+  border-radius: 10px;
 }
 
 .largeScreen .primaryButton {
-  padding: 28px 56px;
-  font-size: 1.5rem;
+  padding: 8px;
+  font-size: 1.1rem;
 }
 
 /* Success State */
@@ -923,7 +924,7 @@
 .tableContainer {
   border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15);
   background: white;
 }
 
@@ -944,15 +945,15 @@
   .headerSection {
     padding: 20px 16px;
   }
-  
+
   .mainContent {
     padding: 16px;
   }
-  
+
   .stepperContainer {
     padding: 16px;
   }
-  
+
   .stepCardContent {
     padding: 20px !important;
   }
@@ -962,16 +963,17 @@
   .headerSection {
     padding: 16px 12px;
   }
-  
+
   .mainContent {
     padding: 12px;
   }
-  
+
   .qrBankContainer {
     gap: 16px;
   }
-  
-  .qrCard, .bankCard {
+
+  .qrCard,
+  .bankCard {
     padding: 16px;
   }
 }
@@ -981,15 +983,15 @@
   .headerSection {
     padding: 20px 30px;
   }
-  
+
   .mainContent {
     padding: 20px 30px;
   }
-  
+
   .stepContent {
     min-height: 300px;
   }
-  
+
   .stepperContainer {
     padding: 20px;
   }
@@ -1000,11 +1002,11 @@
   .container.largeScreen {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   }
-  
+
   .largeScreen .mainContent {
     padding: 60px 80px;
   }
-  
+
   .largeScreen .headerSection {
     padding: 60px 80px 40px;
   }
@@ -1038,7 +1040,7 @@
 .tableContainer {
   border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15);
   background: white;
   overflow-x: auto;
 }
@@ -1072,7 +1074,7 @@
 .tableRow:hover {
   background: #f8f9fa !important;
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .tableCell {
@@ -1194,7 +1196,8 @@
   flex-wrap: wrap;
 }
 
-.viewButton, .cancelButton {
+.viewButton,
+.cancelButton {
   font-size: 0.75rem !important;
   padding: 4px 12px !important;
   min-width: auto !important;
@@ -1206,7 +1209,8 @@
   gap: 4px;
 }
 
-.mobile .viewButton, .mobile .cancelButton {
+.mobile .viewButton,
+.mobile .cancelButton {
   font-size: 0.7rem !important;
   padding: 2px 8px !important;
 }
@@ -1226,7 +1230,8 @@
 }
 
 .desktop .emptyState {
-  padding: 100px 60px;
+  padding: 16px;
+  background-color: antiquewhite;
 }
 
 .emptyIcon {
@@ -1240,7 +1245,7 @@
 }
 
 .desktop .emptyIcon {
-  font-size: 120px !important;
+  font-size: 52px !important;
 }
 
 .emptyTitle {
@@ -1275,15 +1280,15 @@
   .tableContainer {
     border-radius: 16px;
   }
-  
+
   .tableHeaderCell {
     padding: 12px 8px !important;
   }
-  
+
   .tableCell {
     padding: 10px 6px !important;
   }
-  
+
   .columnTitle {
     font-size: 0.8rem !important;
   }
@@ -1294,21 +1299,21 @@
   .tableContainer {
     display: none;
   }
-  
+
   .mobileCardContainer {
     display: block;
     padding: 16px;
   }
-  
+
   .historyCard {
     background: white;
     border-radius: 16px;
     padding: 20px;
     margin-bottom: 16px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     border: 1px solid #e0e0e0;
   }
-  
+
   .cardRow {
     display: flex;
     justify-content: space-between;
@@ -1317,24 +1322,24 @@
     padding-bottom: 12px;
     border-bottom: 1px solid #f0f0f0;
   }
-  
+
   .cardRow:last-child {
     margin-bottom: 0;
     border-bottom: none;
   }
-  
+
   .cardLabel {
     font-weight: 600;
     color: #666;
     font-size: 0.9rem;
   }
-  
+
   .cardValue {
     font-weight: 600;
     color: #333;
     text-align: right;
   }
-  
+
   .cardActions {
     display: flex;
     gap: 8px;
@@ -1355,7 +1360,7 @@
   .tableCell {
     padding: 20px 16px !important;
   }
-  
+
   .columnTitle {
     font-size: 1.2rem !important;
   }

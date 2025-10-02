@@ -3,13 +3,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styles from './VerifyOtp.module.css';
 
-const VerifyOtp = ({ 
-  isOpen, 
-  onClose, 
-  onVerify, 
-  onChangeNumber, 
+const VerifyOtp = ({
+  isOpen,
+  onClose,
+  onVerify,
+  onChangeNumber,
   onResendOtp,
-  phoneNumber ,
+  phoneNumber,
   isLoading = false,
   isTestNumber = false
 }) => {
@@ -85,7 +85,7 @@ const VerifyOtp = ({
     setError('');
     setOtp(['', '', '', '', '', '']);
     inputRefs.current[0]?.focus();
-    
+
     if (onResendOtp) {
       await onResendOtp();
     }
@@ -108,7 +108,7 @@ const VerifyOtp = ({
             <i className="fas fa-mobile-alt"></i>
             <p>Enter the 6-digit code sent to</p>
             <p className={styles.phoneNumber}>{phoneNumber}</p>
-            
+
             {/* Show test OTP hint for test numbers */}
             {isTestNumber && (
               <div className={styles.testOtpHint}>
@@ -116,8 +116,8 @@ const VerifyOtp = ({
                 Test OTP: <strong>000000</strong>
               </div>
             )}
-            
-            <button 
+
+            <button
               className={styles.changeNumberBtn}
               onClick={onChangeNumber}
               disabled={isLoading}
@@ -173,7 +173,7 @@ const VerifyOtp = ({
               <i className="fas fa-arrow-left"></i>
               Back
             </button>
-            
+
             <button
               className={styles.verifyBtn}
               onClick={() => handleSubmit()}

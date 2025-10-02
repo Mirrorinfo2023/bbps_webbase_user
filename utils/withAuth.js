@@ -14,6 +14,7 @@ const withAuth = (WrappedComponent) => {
       const role = Cookies.get('role') || sessionStorage.getItem('role')
 
       if (!uid || role !== 'user') {
+        
         router.replace('/login')
       } else {
         setLoading(false) // user is authenticated

@@ -100,7 +100,7 @@ function UploadKyc({ open, onClose }) {
     const handleNext = () => validateStep() && setActiveStep((p) => p + 1);
     const handleBack = () => setActiveStep((p) => p - 1);
 
-    // const token = localStorage.getItem("token"); // or sessionStorage
+    // const token = sessionStorage.getItem("token"); // or sessionStorage
 
     const handleSubmit = async () => {
         setLoading(true);

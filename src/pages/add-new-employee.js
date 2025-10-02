@@ -18,9 +18,9 @@ function AddEmployee(props) {
 
   useEffect(() => {
     const getMenus =
-      localStorage.getItem("menu") !== "" &&
-      localStorage.getItem("menu") != "undefined"
-        ? JSON.parse(localStorage.getItem("menu"))
+      sessionStorage.getItem("menu") !== "" &&
+      sessionStorage.getItem("menu") != "undefined"
+        ? JSON.parse(sessionStorage.getItem("menu"))
         : [];
     const page_url = "employee-list";
     let foundMenu = false;

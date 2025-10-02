@@ -405,7 +405,7 @@ export default function Profile() {
         const role = Cookies.get('role');
         Cookies.remove('role');
 
-        // Clear sessionStorage and localStorage
+        // Clear sessionStorage and sessionStorage
         sessionStorage.clear();
         localStorage.clear();
 
@@ -600,7 +600,7 @@ export default function Profile() {
 
                                             {/* Birth Date */}
                                             <Grid item xs={12} sm={6}>
-                                                <LocalizationProvider dateAdapter={AdapterDateFns}> 
+                                                <LocalizationProvider dateAdapter={AdapterDateFns}>
                                                     <DatePicker
                                                         label="Birth Date"
                                                         value={profileData.birthDate}
@@ -610,7 +610,7 @@ export default function Profile() {
                                                                 {...params}
                                                                 size="medium"
                                                                 fullWidth  // make sure this is here
-                                                                sx={{ backgroundColor: '#f9f9f9', borderRadius: 1,}}
+                                                                sx={{ backgroundColor: '#f9f9f9', borderRadius: 1, }}
                                                                 InputProps={{
                                                                     ...params.InputProps,
                                                                     startAdornment: (

@@ -90,7 +90,7 @@ export default function OtpVerifyPage() {
 
   useEffect(() => {
     if (!mobile) {
-      const storedMobile = localStorage.getItem('mobile');
+      const storedMobile = sessionStorage.getItem('mobile');
       if (!storedMobile) {
         router.replace('/login');
       }
@@ -113,15 +113,15 @@ export default function OtpVerifyPage() {
     clearAlert();
     
     try {
-      const verifyMobile = mobile || localStorage.getItem('mobile');
+      const verifyMobile = mobile || sessionStorage.getItem('mobile');
       const verifyCategories = categories || "login";
       
       const response = await otpService.verifyOtp(verifyMobile, verifyCategories, otp);
       
       if (response.status === 200) {
         // OTP verified successfully
-        localStorage.setItem('otp_verified', 'true');
-        localStorage.setItem('otp_verified_at', new Date().toISOString());
+        sessionStorage.setItem('otp_verified', 'true');
+        sessionStorage.setItem('otp_verified_at', new Date().toISOString());
         Cookies.set('otp_verified', 'true', { expires: 1 });
         
         setAlert({ open: true, type: true, message: 'OTP verified successfully!' });
@@ -156,8 +156,8 @@ export default function OtpVerifyPage() {
 
   const handleChangeNumber = () => {
     setIsOtpOpen(false);
-    localStorage.removeItem('mobile');
-    localStorage.removeItem('token');
+    sessionStorage.removeItem('mobile');
+    sessionStorage.removeItem('token');
     Cookies.remove('mobile');
     Cookies.remove('token');
     router.replace('/login');
@@ -168,7 +168,7 @@ export default function OtpVerifyPage() {
       setIsLoading(true);
       clearAlert();
       
-      const resendMobile = mobile || localStorage.getItem('mobile');
+      const resendMobile = mobile || sessionStorage.getItem('mobile');
       const resendCategories = categories || "login";
       
       const response = await otpService.sendOtp(resendMobile, resendCategories);
@@ -194,7 +194,7 @@ export default function OtpVerifyPage() {
   };
 
   const testNumbers = ['9096608606', '1111111111'];
-  const currentMobile = mobile || localStorage.getItem('mobile');
+  const currentMobile = mobile || sessionStorage.getItem('mobile');
   const isTestNumber = testNumbers.includes(currentMobile);
 
   if (!currentMobile) {

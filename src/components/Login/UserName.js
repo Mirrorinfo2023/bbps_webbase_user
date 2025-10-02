@@ -31,9 +31,11 @@ const UserName = ({ onForgotPassword, onUnblock }) => {
     const [captchaToken, setCaptchaToken] = useState(null);
     const [alert, setAlert] = useState({ open: false, type: false, message: null });
     const [loading, setLoading] = useState(false);
+
     const handleSignUpClick = () => {
         route.push('/sign-up'); // This will navigate to your existing sign-up.js page
     };
+
     const handleChange = (field) => (event) => {
         setFormData(prev => ({
             ...prev,
@@ -64,6 +66,81 @@ const UserName = ({ onForgotPassword, onUnblock }) => {
             return;
         }
         setAlert({ open: false, type: false, message: null });
+    };
+
+    // New: Request OTP API call (called after successful login)
+    const handleRequestOtp = async () => {
+        try {
+            console.log('Requesting OTP to:', userData?.mobile);
+
+            // Prepare required data for backend (all keys: mode, type, category, mobile, email, name)
+            const reqData = {
+                mode: 'API',  // Adjust if backend expects different (e.g., 'email', 'both')
+                type: 'Mobile',  // Adjust if needed (e.g., 'login')
+                category: 'Login',  // Fits login flow; backend won't reject
+                mobile: sessionStorage.getItem('mobile') || '',
+                email: sessionStorage.getItem('email') || '',  // From login response
+                name: `${sessionStorage.getItem('first_name') || ''} ${sessionStorage.getItem('last_name') || ''}`.trim()  // From login response
+            };
+
+            console.log("reqData ", reqData)
+            // Validate required fields (prevent backend 400)
+            const requiredKeys = ['mode', 'type', 'category', 'mobile', 'email', 'name'];
+            if (!requiredKeys.every(key => reqData[key] !== undefined && reqData[key] !== null)) {
+                throw new Error('Missing required OTP request data');
+            }
+
+            // Encrypt request (matching backend expectation)
+            const encReq = DataEncrypt(JSON.stringify(reqData));
+
+            // Send encrypted request
+            const response = await api.post('/api/otp/8930cae4a942a0286226f1651dfbff89216174c8', { encReq }, {
+                headers: {
+                    'Authorization': `Bearer ${userData?.token}`
+                }
+            });
+
+            // Decrypt and check response (optional, but good for error handling)
+            const decryptedResponse = DataDecrypt(response.data);
+            console.log('OTP request response:', decryptedResponse);
+
+            if (decryptedResponse.status === 200) {
+                console.log('OTP requested successfully');
+            } else {
+                throw new Error(decryptedResponse.message || 'OTP request failed');
+            }
+
+        } catch (error) {
+            console.error('Request OTP error:', error);
+
+            let errorMsg = 'Failed to send OTP. Please try again.';
+            if (error?.response?.status === 400) {
+                // Handle missing keys or validation
+                try {
+                    const decryptedError = DataDecrypt(error.response.data);
+                    errorMsg = decryptedError.message || errorMsg;
+                } catch (decryptErr) {
+                    errorMsg = error.response.data || errorMsg;
+                }
+            } else if (error?.response?.status === 500) {
+                // Handle DB/SMS errors
+                try {
+                    const decryptedError = DataDecrypt(error.response.data);
+                    errorMsg = decryptedError.message || 'Server error while sending OTP';
+                } catch (decryptErr) {
+                    errorMsg = error.response.data || errorMsg;
+                }
+            }
+
+            // Show error alert
+            setAlert({ open: true, type: false, message: errorMsg });
+
+            // Clear user data to prevent dialog from opening
+            setUserData(null);
+            sessionStorage.clear();  // Optional: Clear all stored data on failure
+
+            throw error; // Re-throw to prevent dialog from showing in submitHandler
+        }
     };
 
     const submitHandler = async (e) => {
@@ -101,11 +178,9 @@ const UserName = ({ onForgotPassword, onUnblock }) => {
             // Decrypt response
             const decryptedResponse = DataDecrypt(response.data);
 
-            console.log("decryptedResponse are: ", decryptedResponse)
+            console.log("decryptedResponse are: ", decryptedResponse);
             if (decryptedResponse.status === 200) {
-                setAlert({ open: true, type: true, message: 'SignIn successfully!' });
-
-                const userData = decryptedResponse.data; // user info
+                const userDataFromApi = decryptedResponse.data; // user info
                 const token = decryptedResponse.token;   // token from top-level
                 const refreshToken = decryptedResponse.refreshToken;   // token from top-level
 
@@ -116,38 +191,40 @@ const UserName = ({ onForgotPassword, onUnblock }) => {
                 sessionStorage.setItem('menu', JSON.stringify(decryptedResponse.employeeMenu || []));
 
                 // Store each field from backend separately
-                sessionStorage.setItem('id', userData.id);
-                sessionStorage.setItem('mlm_id', userData.mlm_id);
-                sessionStorage.setItem('first_name', userData.first_name);
-                sessionStorage.setItem('last_name', userData.last_name);
-                sessionStorage.setItem('username', userData.username);
-                sessionStorage.setItem('email', userData.email);
-                sessionStorage.setItem('mobile', userData.mobile);
-                sessionStorage.setItem('refered_by', userData.refered_by);
-                sessionStorage.setItem('country', userData.country);
-                sessionStorage.setItem('state', userData.state);
-                sessionStorage.setItem('circle', userData.circle);
-                sessionStorage.setItem('district', userData.district);
-                sessionStorage.setItem('division', userData.division);
-                sessionStorage.setItem('region', userData.region);
-                sessionStorage.setItem('block', userData.block);
-                sessionStorage.setItem('pincode', userData.pincode);
-                sessionStorage.setItem('address', userData.address);
-                sessionStorage.setItem('dob', userData.dob);
-                sessionStorage.setItem('is_prime', userData.is_prime);
-                sessionStorage.setItem('registration_date', userData.registration_date);
-                sessionStorage.setItem('role_name', userData.role_name || '');
+                sessionStorage.setItem('id', userDataFromApi.id);
+                sessionStorage.setItem('mlm_id', userDataFromApi.mlm_id);
+                sessionStorage.setItem('first_name', userDataFromApi.first_name);
+                sessionStorage.setItem('last_name', userDataFromApi.last_name);
+                sessionStorage.setItem('username', userDataFromApi.username);
+                sessionStorage.setItem('email', userDataFromApi.email);
+                sessionStorage.setItem('mobile', userDataFromApi.mobile);
+                sessionStorage.setItem('refered_by', userDataFromApi.refered_by);
+                sessionStorage.setItem('country', userDataFromApi.country);
+                sessionStorage.setItem('state', userDataFromApi.state);
+                sessionStorage.setItem('circle', userDataFromApi.circle);
+                sessionStorage.setItem('district', userDataFromApi.district);
+                sessionStorage.setItem('division', userDataFromApi.division);
+                sessionStorage.setItem('region', userDataFromApi.region);
+                sessionStorage.setItem('block', userDataFromApi.block);
+                sessionStorage.setItem('pincode', userDataFromApi.pincode);
+                sessionStorage.setItem('address', userDataFromApi.address);
+                sessionStorage.setItem('dob', userDataFromApi.dob);
+                sessionStorage.setItem('is_prime', userDataFromApi.is_prime);
+                sessionStorage.setItem('registration_date', userDataFromApi.registration_date);
+                sessionStorage.setItem('role_name', userDataFromApi.role_name || '');
 
                 setUserData({
-                    mobile: userData.mobile || formData.mobileNumber,
+                    mobile: userDataFromApi.mobile || formData.mobileNumber,
                     token: token,
                     refreshToken: refreshToken
                 });
 
+                // Request OTP after successful login
+                await handleRequestOtp();
+
+                // Open OTP dialog (no success alert shown here)
                 setShowOtpDialog(true);
-                setAlert({ open: true, type: true, message: 'Login successful! Please verify OTP.' });
-                // Redirect to dashboard
-                // route.replace('/dashboard');
+
             } else {
                 setAlert({ open: true, type: false, message: decryptedResponse.message });
             }
@@ -167,7 +244,6 @@ const UserName = ({ onForgotPassword, onUnblock }) => {
         }
     };
 
-
     // OTP Verification Handler
     const handleVerifyOtp = async (otp) => {
         setOtpLoading(true);
@@ -175,45 +251,47 @@ const UserName = ({ onForgotPassword, onUnblock }) => {
             console.log('Verifying OTP:', otp);
             console.log('Mobile:', userData?.mobile);
 
-            // OTP verification API call
-            const verifyResponse = await api.post('/api/verify-otp', {
-                mobile: userData?.mobile,
-                otp: otp,
-                token: userData?.token
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${userData?.token}`
-                }
-            });
+            const reqData = {
+                otp,
+                mode: 'API',
+                type: 'Mobile',
+                category: 'Login',
+                mobile: sessionStorage.getItem('mobile') || ''
+            };
 
-            if (verifyResponse.status === 200) {
-                setAlert({ open: true, type: true, message: 'OTP verified successfully! Redirecting to dashboard...' });
+            const encReq = DataEncrypt(JSON.stringify(reqData));
+
+            const response = await api.post(
+                '/api/otp/3ae2750febeb3583bec28c67c42063120cb72963',
+                { encReq },
+                { headers: { 'Authorization': `Bearer ${userData?.token}` } }
+            );
+
+            const decryptedResponse = DataDecrypt(response.data);
+            console.log('OTP verification response:', decryptedResponse);
+
+            if (decryptedResponse.status === 200) {
+                setAlert({ open: true, type: true, message: 'OTP verified successfully!' });
                 setShowOtpDialog(false);
 
-                // Store OTP verification status
                 sessionStorage.setItem('otp_verified', 'true');
                 Cookies.set('otp_verified', 'true', { expires: 1 });
 
-                // Redirect to dashboard after successful OTP verification
-                setTimeout(() => {
-                    route.replace('/dashboard');
-                }, 1500);
+                setTimeout(() => route.replace('/dashboard'), 3000);
             } else {
-                route.replace('/dashboard');
-
-                throw new Error(verifyResponse.data?.message || 'OTP verification failed');
+                const errorMsg = decryptedResponse.message || 'OTP verification failed';
+                setAlert({ open: true, type: false, message: errorMsg });
             }
 
         } catch (error) {
-            route.replace('/dashboard');
-
             console.error('OTP verification error:', error);
-            const errorMsg = error.response?.data?.message || 'OTP verification failed. Please try again.';
+            const errorMsg = error.response?.data?.message || 'OTP verification failed';
             setAlert({ open: true, type: false, message: errorMsg });
         } finally {
             setOtpLoading(false);
         }
     };
+
 
     const handleCloseOtp = () => {
         console.log('OTP dialog closed');
@@ -257,7 +335,6 @@ const UserName = ({ onForgotPassword, onUnblock }) => {
             setAlert({ open: true, type: false, message: 'Failed to resend OTP. Please try again.' });
         }
     };
-
 
     const togglePasswordVisibility = () => {
         setShowPassword(prev => !prev);
@@ -377,7 +454,6 @@ const UserName = ({ onForgotPassword, onUnblock }) => {
                             </Typography>
 
                             <Typography className={styles.linkText}
-
                                 onClick={onUnblock}
                                 sx={{ cursor: 'pointer' }}
                             >
@@ -400,7 +476,7 @@ const UserName = ({ onForgotPassword, onUnblock }) => {
                     </Grid>
                 </Grid>
             </form>
-            {/* OTP Verification Dialog - Shows after successful login */}
+            {/* OTP Verification Dialog - Shows after successful login and req-otp */}
             <VerifyOtp
                 isOpen={showOtpDialog}
                 onClose={handleCloseOtp}

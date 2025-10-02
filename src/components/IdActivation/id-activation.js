@@ -326,7 +326,7 @@ const IdActivation = () => {
 
   // Get token from storage (adjust based on your auth setup)
   const getToken = () => {
-    return localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    return sessionStorage.getItem('authToken') || sessionStorage.getItem('authToken');
   };
 
   const handleInputChange = (e) => {
@@ -452,7 +452,7 @@ const IdActivation = () => {
       return;
     }
 
-    const token = getToken();
+    const token = sessionStorage.getItem('token');
     if (!token) {
       showAlert('Please login to submit activation request.', 'error');
       return;
@@ -462,6 +462,7 @@ const IdActivation = () => {
 
     try {
       // Call the API
+      console.log("hello",formData)
       const response = await apiService.submitIdActivation(formData, token);
 
       console.log('API Response:', response);
@@ -875,32 +876,7 @@ const IdActivation = () => {
               </Grid>
             </Box>
 
-            {/* Footer */}
-            <Box
-              sx={{
-                p: 3,
-                borderTop: 1,
-                borderColor: 'divider',
-                textAlign: 'center',
-                backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                flexShrink: 0
-              }}
-            >
-              <Typography
-                variant="body1"
-                color="textSecondary"
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 2,
-                  fontSize: '1rem'
-                }}
-              >
-                <SecurityIcon color="success" />
-                Your data is securely encrypted and protected
-              </Typography>
-            </Box>
+
           </CardContent>
         </FormSection>
       </FullScreenCard>

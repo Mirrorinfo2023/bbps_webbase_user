@@ -202,13 +202,13 @@ function Layout(props) {
   const handleFirstMenuClick = (menuIndex, parent) => {
     setSelectedMenu(menuIndex);
     setCurrentMenu(parent);
-    localStorage.setItem('currentMenu', parent);
+    sessionStorage.setItem('currentMenu', parent);
   };
 
 
   useEffect(() => {
     const currentPath = pathName;
-    setCurrentMenu(localStorage.getItem('currentMenu') ? localStorage.getItem('currentMenu') : 'dashboard');
+    setCurrentMenu(sessionStorage.getItem('currentMenu') ? sessionStorage.getItem('currentMenu') : 'dashboard');
     const checkPathInMenuArray = (menuArray) => {
       return menuArray.some(item => currentPath.startsWith(`/${item.redirect}`));
     };
@@ -262,7 +262,7 @@ function Layout(props) {
     const role = Cookies.get('role');
     Cookies.remove('role');
 
-    // Clear sessionStorage and localStorage
+    // Clear sessionStorage and sessionStorage
     sessionStorage.clear();
     localStorage.clear();
 
@@ -528,9 +528,9 @@ function Layout(props) {
 
   // RECENT TABS STATE
   const [recentTabs, setRecentTabs] = useState([]);
-  // On mount, load recentTabs from localStorage (persistent history)
+  // On mount, load recentTabs from sessionStorage (persistent history)
   useEffect(() => {
-    let tabs = JSON.parse(localStorage.getItem(RECENT_TABS_KEY) || '[]');
+    let tabs = JSON.parse(sessionStorage.getItem(RECENT_TABS_KEY) || '[]');
     // Filter out tabs that are not workflow tabs
     tabs = tabs.filter(tab => isWorkflowTab(tab.path));
     setRecentTabs(tabs);
@@ -540,14 +540,14 @@ function Layout(props) {
     if (!pathName) return;
     const normPath = normalizePath(pathName);
     if (!isWorkflowTab(normPath)) return;
-    let tabs = JSON.parse(localStorage.getItem(RECENT_TABS_KEY) || '[]');
+    let tabs = JSON.parse(sessionStorage.getItem(RECENT_TABS_KEY) || '[]');
     // Remove if already exists (normalize for comparison)
     tabs = tabs.filter(tab => normalizePath(tab.path) !== normPath);
     // Add to front
     tabs.unshift({ path: normPath, name: getMenuNameByPath(normPath) });
     // Limit
     tabs = tabs.slice(0, RECENT_TABS_LIMIT);
-    localStorage.setItem(RECENT_TABS_KEY, JSON.stringify(tabs));
+    sessionStorage.setItem(RECENT_TABS_KEY, JSON.stringify(tabs));
     setRecentTabs(tabs);
   }, [pathName]);
 

@@ -38,8 +38,11 @@ import {
   Close as CloseIcon,
   Warning as WarningIcon,
   Sync as SyncIcon,
+  History as HistoryIcon,
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
+import API from "../../../utils/api"
+import { useRouter } from 'next/navigation';
 
 // Styled components for FULL SCREEN optimization
 const FullScreenContainer = styled(Box)(({ theme }) => ({
@@ -71,7 +74,7 @@ const FullScreenCard = styled(Card)(({ theme }) => ({
 const HeaderSection = styled(Box)(({ theme }) => ({
   background: 'linear-gradient(135deg, #4361ee, #3a0ca3)',
   color: 'white',
-  padding: theme.spacing(4),
+  padding: theme.spacing(2),
   position: 'relative',
   flexShrink: 0,
   '&::before': {
@@ -95,8 +98,8 @@ const HeaderContent = styled(Box)(({ theme }) => ({
 }));
 
 const IconWrapper = styled(Avatar)(({ theme }) => ({
-  width: 70,
-  height: 70,
+  width: 50,
+  height: 50,
   background: 'rgba(255, 255, 255, 0.25)',
   borderRadius: theme.spacing(2),
   fontSize: 28,
@@ -258,65 +261,67 @@ const apiService = {
   submitIdActivation: async (formData, token) => {
     const formDataToSend = new FormData();
 
-    // Append form fields
+    // Get user id from session storage
+    const userId = sessionStorage.getItem("id");
+
+    // Append form fields with same keys as backend
     formDataToSend.append('amount', formData.amount);
-    formDataToSend.append('remarks', formData.remarks);
+    formDataToSend.append('remark', formData.remark);       // ✅ backend expects "remark"
+    formDataToSend.append('user_id', userId);               // ✅
+    formDataToSend.append('sender_user_id', userId);        // ✅
+    formDataToSend.append('plan_id', "3");
 
     // Append UTR numbers (filter out empty ones)
-    formData.utrNumbers.filter(utr => utr.trim() !== '').forEach((utr, index) => {
-      formDataToSend.append(`utrNumbers[${index}]`, utr);
-    });
+    // instead of appending utr_id[0], utr_id[1]
+    formDataToSend.append("utr_id", JSON.stringify(formData.utrNumbers.filter(utr => utr.trim() !== "")));
 
-    // Append receipt file
-    if (formData.receipt) {
-      formDataToSend.append('receipt', formData.receipt);
+
+    // If single file
+    // if (formData.receipt) {
+    //   formDataToSend.append("images", formData.receipt);
+    // }
+
+    // If multiple files
+    if (formData.receipt && formData.receipt.length > 0) {
+      formData.receipt.forEach(file => {
+        formDataToSend.append("images", file); // ✅ match multer
+      });
     }
 
-    const response = await fetch(`${API_BASE_URL}/id-activation`, {
-      method: 'POST',
-      headers: {
-        'Authorization': Bearer`${token}`,
-        // Don't set Content-Type for FormData - browser will set it with boundary
-      },
-      body: formDataToSend,
-    });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    for (let pair of formDataToSend.entries()) {
+      console.log(pair[0], pair[1]);
     }
 
-    return await response.json();
-  },
 
-  // Get activation status
-  getActivationStatus: async (activationId, token) => {
-    const response = await fetch(`${API_BASE_URL}/id-activation/${activationId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    // Send request with Axios
+    const response = await API.post(
+      '/api/prime-requests',
+      formDataToSend,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
+      }
+    );
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
-  },
+    return response.data; // Axios auto parses JSON
+  }
 };
+
 
 const IdActivation = () => {
   const [formData, setFormData] = useState({
     amount: '',
-    remarks: '',
+    remark: '',
     utrNumbers: [''],
-    receipt: null
+    receipt: []
   });
-
+  const router = useRouter();
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [previewImage, setPreviewImage] = useState(null);
+  const [previewImage, setPreviewImage] = useState([]); // ✅ array for multiple previews
+
   const [showError, setShowError] = useState(true);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [alert, setAlert] = useState({ open: false, type: 'success', message: '' });
@@ -342,6 +347,14 @@ const IdActivation = () => {
         [name]: ''
       }));
     }
+  };
+  const removeFile = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      receipt: prev.receipt.filter((_, i) => i !== index)
+    }));
+
+    setPreviewImage(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleUtrChange = (index, value) => {
@@ -369,45 +382,34 @@ const IdActivation = () => {
       }));
     }
   };
+  const handleHistoryClick = () => {
+    router.push('/id-activation-history');
+  };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (!file.type.match('image/jpeg')) {
-        setErrors(prev => ({
-          ...prev,
-          receipt: 'Please upload only JPG images'
-        }));
-        return;
-      }
+    const files = Array.from(e.target.files);
 
-      if (file.size > 5 * 1024 * 1024) {
-        setErrors(prev => ({
-          ...prev,
-          receipt: 'File size must be less than 5MB'
-        }));
-        return;
-      }
+    // Validate files
+    const validFiles = files.filter(file => {
+      if (!file.type.match('image/jpeg')) return false;
+      if (file.size > 5 * 1024 * 1024) return false;
+      return true;
+    });
 
-      setFormData(prev => ({
-        ...prev,
-        receipt: file
-      }));
+    if (validFiles.length === 0) return;
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPreviewImage(e.target.result);
-      };
-      reader.readAsDataURL(file);
+    setFormData(prev => ({
+      ...prev,
+      receipt: [...(prev.receipt || []), ...validFiles]
+    }));
 
-      if (errors.receipt) {
-        setErrors(prev => ({
-          ...prev,
-          receipt: ''
-        }));
-      }
-    }
+
+    // Generate previews for all files
+    const previews = validFiles.map(file => URL.createObjectURL(file));
+    setPreviewImage(prev => [...(prev || []), ...previews]);
   };
+
+
 
   const validateForm = () => {
     const newErrors = {};
@@ -416,8 +418,8 @@ const IdActivation = () => {
       newErrors.amount = 'Please enter a valid amount';
     }
 
-    if (!formData.remarks.trim()) {
-      newErrors.remarks = 'Remarks are required';
+    if (!formData.remark.trim()) {
+      newErrors.remark = 'Remarks are required';
     }
 
     const validUtrs = formData.utrNumbers.filter(utr => utr.trim() !== '');
@@ -462,7 +464,7 @@ const IdActivation = () => {
 
     try {
       // Call the API
-      console.log("hello",formData)
+      console.log("hello", formData)
       const response = await apiService.submitIdActivation(formData, token);
 
       console.log('API Response:', response);
@@ -475,7 +477,7 @@ const IdActivation = () => {
         // Reset form
         setFormData({
           amount: '',
-          remarks: '',
+          remark: '',
           utrNumbers: [''],
           receipt: null
         });
@@ -531,7 +533,7 @@ const IdActivation = () => {
               </IconWrapper>
               <Box>
                 <Typography
-                  variant="h3"
+                  variant="h5"
                   component="h1"
                   fontWeight="bold"
                   gutterBottom
@@ -539,17 +541,24 @@ const IdActivation = () => {
                   ID Activation
                 </Typography>
                 <Typography
-                  variant="h6"
+                  variant="h7"
                   sx={{ opacity: 0.9, fontWeight: 400 }}
                 >
                   Complete your activation request securely
                 </Typography>
               </Box>
             </Box>
-            <StyledBadge
-              label="My Request"
-              icon={<BadgePulse />}
-            />
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+
+              <Button
+                startIcon={<HistoryIcon />}
+                onClick={handleHistoryClick}
+                sx={{ color: 'primary.main', fontWeight: 600, bgcolor: "white" }}
+              >
+                My Requests
+              </Button>
+            </Box>
+
           </HeaderContent>
         </HeaderSection>
 
@@ -562,33 +571,6 @@ const IdActivation = () => {
             flexDirection: 'column',
             overflow: 'auto'
           }}>
-            {showError && (
-              <Alert
-                severity="warning"
-                sx={{
-                  background: 'linear-gradient(135deg, #ffeaa7, #fab1a0)',
-                  borderLeft: '4px solid #e17055',
-                  borderRadius: 0,
-                  alignItems: 'flex-start',
-                  m: 0,
-                }}
-                action={
-                  <IconButton
-                    size="small"
-                    onClick={() => setShowError(false)}
-                  >
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                }
-              >
-                <Typography fontWeight="bold" color="#d63031">
-                  Connection Error
-                </Typography>
-                <Typography variant="body2" color="#2d3436">
-                  The connection errored: No route to host. This indicates an error which most likely cannot be solved by the library.
-                </Typography>
-              </Alert>
-            )}
 
             <Box
               component="form"
@@ -641,17 +623,17 @@ const IdActivation = () => {
 
                 {/* Remarks Field */}
                 <Grid item xs={12} md={6}>
-                  <FormControl fullWidth error={!!errors.remarks}>
+                  <FormControl fullWidth error={!!errors.remark}>
                     <FormLabel sx={{ mb: 2, fontWeight: 600, fontSize: '1.1rem' }}>
                       Remarks
                     </FormLabel>
                     <TextField
-                      name="remarks"
-                      value={formData.remarks}
+                      name="remark"
+                      value={formData.remark}
                       onChange={handleInputChange}
-                      error={!!errors.remarks}
-                      helperText={errors.remarks}
-                      placeholder="Enter remarks"
+                      error={!!errors.remark}
+                      helperText={errors.remark}
+                      placeholder="Enter remark"
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
@@ -754,61 +736,79 @@ const IdActivation = () => {
 
                     <input
                       type="file"
+                      name="images"
                       id="receipt"
                       accept=".jpg,.jpeg"
+                      multiple                // ✅ allow multiple
                       onChange={handleFileChange}
                       style={{ display: 'none' }}
                     />
 
+
+
                     <label htmlFor="receipt" style={{ width: '100%' }}>
-                      <FileUploadArea error={!!errors.receipt}>
-                        {previewImage ? (
-                          <Box sx={{ display: 'flex', gap: 3, alignItems: 'center', width: '100%' }}>
-                            <PreviewImage>
-                              <img
-                                src={previewImage}
-                                alt="Receipt preview"
-                                style={{
-                                  width: '100%',
-                                  height: '100%',
-                                  objectFit: 'cover'
+                      <FileUploadArea
+                        error={!!errors.receipt}
+                        sx={{
+                          padding: 1,       // smaller padding
+                          minHeight: 10,    // reduce height
+                        }}
+                      >
+                        {(formData.receipt?.length ?? 0) > 0 ? (
+                          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', width: '100%' }}>
+                            {formData.receipt.map((file, idx) => (
+                              <PreviewImage
+                                key={idx}
+                                sx={{
+                                  width: 50,    // smaller width
+                                  height: 50,   // smaller height
+                                  borderRadius: 4
                                 }}
-                              />
-                              <PreviewOverlay className="preview-overlay">
-                                <SyncIcon fontSize="small" />
-                                <Typography variant="caption" sx={{ mt: 0.5 }}>
-                                  Change Image
-                                </Typography>
-                              </PreviewOverlay>
-                            </PreviewImage>
+                              >
+                                <img
+                                  src={previewImage[idx]}
+                                  alt={`Receipt ${idx + 1}`}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                                <PreviewOverlay className="preview-overlay">
+                                  <SyncIcon fontSize="small" />
+                                  <Typography variant="caption" sx={{ mt: 0.5 }}>
+                                    Change
+                                  </Typography>
+                                </PreviewOverlay>
+                              </PreviewImage>
+                            ))}
                             <Box sx={{ textAlign: 'left', flex: 1 }}>
-                              <Typography variant="h6" fontWeight="bold" gutterBottom>
-                                {formData.receipt?.name}
+                              <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                                {formData.receipt.map(f => f.name).join(', ')}
                               </Typography>
-                              <Typography variant="body2" color="textSecondary">
-                                Size: {(formData.receipt?.size / 1024 / 1024).toFixed(2)} MB
+                              <Typography variant="caption" color="textSecondary">
+                                {(formData.receipt.reduce((a, b) => a + b.size, 0) / 1024 / 1024).toFixed(2)} MB
                               </Typography>
                             </Box>
                           </Box>
                         ) : (
                           <Box sx={{ textAlign: 'center', width: '100%' }}>
-                            <UploadIcon
-                              sx={{
-                                fontSize: 56,
-                                color: 'text.secondary',
-                                mb: 2
-                              }}
-                            />
-                            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                            <UploadIcon sx={{ fontSize: 40, color: 'text.secondary', mb: 1 }} />
+                            <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
                               Click to upload receipt
                             </Typography>
-                            <Typography variant="body1" color="textSecondary">
-                              JPG format only • Maximum 5MB file size
+                            <Typography variant="caption" color="textSecondary">
+                              JPG only • Max 5MB
                             </Typography>
                           </Box>
                         )}
                       </FileUploadArea>
+
                     </label>
+
+                    <IconButton
+                      onClick={() => removeFile(idx)}
+                      size="small"
+                      sx={{ position: 'absolute', top: 2, right: 2, color: 'white' }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
 
                     {errors.receipt && (
                       <FormHelperText error sx={{ fontSize: '1rem', mt: 1 }}>
@@ -873,6 +873,7 @@ const IdActivation = () => {
                     </SubmitButton>
                   </Box>
                 </Grid>
+
               </Grid>
             </Box>
 

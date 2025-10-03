@@ -1,738 +1,531 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
   Typography,
   Button,
-  IconButton,
-  Card,
-  CardContent,
-  Divider,
-  Chip,
-  Stack,
-  useTheme,
-  useMediaQuery,
-  CircularProgress,
-  Alert,
-  Snackbar,
+  TextField,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogContentText,
   DialogActions,
-  Paper,
+  Card,
+  CircularProgress,
+  Alert,
+  Snackbar,
+  useTheme,
   Grid,
+  Paper,
+  Chip,
+  Stack,
 } from '@mui/material';
 import {
-  ArrowBack as ArrowBackIcon,
-  Email as EmailIcon,
-  Message as MessageIcon,
-  History as HistoryIcon,
-  AccountBalanceWallet as WalletIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon,
+  Pending as PendingIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
+import API from '../../../utils/api';
+import { DataDecrypt, DataEncrypt } from '../../../utils/encryption';
 
-// API Service
-const redeemApi = {
-  getBonusPoints: async () => {
-    // Mock data for demonstration
-    return {
-      daily: [
-        { id: 1, amount: 150.50, label: 'Daily Login Bonus' },
-        { id: 2, amount: 75.25, label: 'Daily Task Completion' },
-        { id: 3, amount: 200.00, label: 'Referral Bonus' },
-      ],
-      other: [
-        { id: 4, amount: 500.75, label: 'Welcome Bonus' },
-        { id: 5, amount: 300.50, label: 'Seasonal Promotion' },
-        { id: 6, amount: 150.00, label: 'Survey Completion' },
-      ]
-    };
-  },
+// API Service (replace with your actual API base URL)
+const API_BASE_URL = 'https://api.mayway.in/api';
 
-  getRedeemHistory: async () => {
-    // Mock data for demonstration
-    return [
-      {
-        id: 1,
-        date: '2024-01-15 14:30',
-        amount: '250.00',
-        status: 'Completed',
-        message: 'Points transferred to your account successfully'
-      },
-      {
-        id: 2,
-        date: '2024-01-10 09:15',
-        amount: '150.00',
-        status: 'Completed',
-        message: 'Points redeemed for cash reward'
-      },
-      {
-        id: 3,
-        date: '2024-01-05 16:45',
-        amount: '500.00',
-        status: 'Processing',
-        message: 'Your redemption request is being processed'
-      },
-      {
-        id: 4,
-        date: '2024-01-01 11:20',
-        amount: '100.00',
-        status: 'Completed',
-        message: 'Points converted to gift card'
-      }
-    ];
-  },
+const BonusService = {
+  fetchBonusRaw: async (userId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/referral/plan/get-referral-balance`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ user_id: userId }),
+      });
 
-  redeemPoints: async (amount, type = 'total') => {
-    // Mock API call
-    return { message: `Successfully redeemed ${amount} points from ${type}` };
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+      const data = await response.json();
+      console.log('Bonus Raw API Response:', data);
+
+      return {
+        dailyBonusMap: data.getDailyBonusBalance || {},
+        referralBonusMap: data.getBonusBalance || {},
+        profitBonusMap: data.getReferralBonusBalance || {},
+      };
+    } catch (error) {
+      console.error('Error fetching bonus data:', error);
+      throw error;
+    }
   },
 };
 
-const RedeemPage = () => {
+const RedeemService = {
+  requestRedeem: async (userId, amount, walletType, remark, bonusId) => {
+    try {
+      const reqData = {
+        user_id: userId,
+        amount,
+        wallet_type: walletType,
+        remarks: remark,
+        plan_id: bonusId,
+      };
+
+      const encReq = DataEncrypt(JSON.stringify(reqData));
+      const response = await API.post(
+        `/api/referral/plan/1b11b22949aff1244922265015f806637a523f04`,
+        { encReq },
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+
+      const decryptedResponse = DataDecrypt(response.data);
+      console.log('Redeem API Response:', decryptedResponse);
+      return decryptedResponse;
+    } catch (error) {
+      console.error('Error processing redeem:', error);
+      throw error;
+    }
+  },
+};
+
+const RedeemHistoryService = {
+  fetchRedeemHistory: async (userId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/report/get-redeem-history`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, page: 1 }),
+      });
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+      const data = await response.json();
+      console.log('Redeem History API Response:', data);
+
+      return data.status === 200 && data.data ? data.data : [];
+    } catch (error) {
+      console.error('Error fetching redeem history:', error);
+      return [];
+    }
+  },
+};
+
+const RedeemScreen = ({ isFromEwallet = false }) => {
   const router = useRouter();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
 
-  const [showAllHistory, setShowAllHistory] = useState(false);
-  const [expandedSections, setExpandedSections] = useState({
-    daily: true,
-    other: true,
-    history: true
-  });
+  const [amountController, setAmountController] = useState('');
+  const [noteController, setNoteController] = useState('');
+  const [dailyBonusMap, setDailyBonusMap] = useState({});
+  const [referralBonusMap, setReferralBonusMap] = useState({});
+  const [profitBonusMapRaw, setProfitBonusMapRaw] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [confirmDialog, setConfirmDialog] = useState({ open: false, amount: 0, type: '' });
+  const [redeemDialogOpen, setRedeemDialogOpen] = useState(false);
+  const [currentRedeemType, setCurrentRedeemType] = useState('');
+  const [currentBonusId, setCurrentBonusId] = useState(null);
+  const [currentBonusAmount, setCurrentBonusAmount] = useState(0);
+  const [isButtonTap, setIsButtonTap] = useState(false);
+  const [historyData, setHistoryData] = useState([]);
+  const [userId, setUserId] = useState(null);
 
-  // State for API data
-  const [bonusData, setBonusData] = useState({
-    daily: [],
-    other: []
-  });
-  const [redeemHistory, setRedeemHistory] = useState([]);
-  const [redeeming, setRedeeming] = useState(false);
-
-  // Calculate total points
-  const totalPoints = bonusData.daily.reduce((sum, item) => sum + (item.amount || 0), 0) +
-    bonusData.other.reduce((sum, item) => sum + (item.amount || 0), 0);
-
-  // Fetch data on component mount
   useEffect(() => {
-    fetchData();
+    const storedUser = sessionStorage.getItem('id');
+    if (storedUser) setUserId(storedUser);
   }, []);
 
-  const fetchData = async () => {
+  useEffect(() => {
+    if (userId) {
+      loadBonus();
+      fetchRedeemHistory();
+    }
+  }, [userId]);
+
+  const loadBonus = async () => {
     try {
       setLoading(true);
-      setError('');
-
-      // Fetch bonus points and redeem history concurrently
-      const [bonusResponse, historyResponse] = await Promise.all([
-        redeemApi.getBonusPoints(),
-        redeemApi.getRedeemHistory()
-      ]);
-
-      setBonusData(bonusResponse);
-      setRedeemHistory(historyResponse);
-    } catch (err) {
-      setError(err.message || 'Failed to load data');
-      console.error('Error fetching data:', err);
+      const result = await BonusService.fetchBonusRaw(userId);
+      setDailyBonusMap(result.dailyBonusMap || {});
+      setReferralBonusMap(result.referralBonusMap || {});
+      setProfitBonusMapRaw(result.profitBonusMap || {});
+    } catch {
+      setError('Failed to load bonus data');
     } finally {
       setLoading(false);
     }
   };
 
-  const showAlert = (message, type = 'success') => {
-    if (type === 'success') {
-      setSuccess(message);
-    } else {
-      setError(message);
-    }
-  };
-
-  const handleCloseAlert = () => {
-    setError('');
-    setSuccess('');
-  };
-
-  const handleIndividualRedeem = (amount, type) => {
-    setConfirmDialog({
-      open: true,
-      amount,
-      type: `individual-${type}`,
-      message: `Are you sure you want to redeem ${amount.toFixed(2)} points from ${type}?`
-    });
-  };
-
-  const handleTotalRedeem = () => {
-    if (totalPoints <= 0) {
-      showAlert('No points available to redeem', 'error');
-      return;
-    }
-
-    setConfirmDialog({
-      open: true,
-      amount: totalPoints,
-      type: 'total',
-      message: `Are you sure you want to redeem all ${totalPoints.toFixed(2)} points?`
-    });
-  };
-
-  const confirmRedeem = async () => {
+  const fetchRedeemHistory = async () => {
     try {
-      setRedeeming(true);
-      setConfirmDialog(prev => ({ ...prev, open: false }));
-
-      const response = await redeemApi.redeemPoints(confirmDialog.amount, confirmDialog.type);
-
-      showAlert(response.message || 'Points redeemed successfully!');
-
-      // Refresh data
-      await fetchData();
-    } catch (err) {
-      showAlert(err.message || 'Failed to redeem points', 'error');
-    } finally {
-      setRedeeming(false);
+      const history = await RedeemHistoryService.fetchRedeemHistory(userId);
+      setHistoryData(history);
+    } catch {
+      setHistoryData([]);
     }
   };
 
-  const cancelRedeem = () => {
-    setConfirmDialog(prev => ({ ...prev, open: false }));
+  const openRedeemDialog = (type, bonusId, amount) => {
+    setCurrentRedeemType(type);
+    setCurrentBonusId(bonusId);
+    setCurrentBonusAmount(amount);
+    setAmountController('');
+    setNoteController('');
+    setRedeemDialogOpen(true);
   };
 
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
+  const handleRedeem = async () => {
+    if (isButtonTap) return;
+
+    try {
+      setIsButtonTap(true);
+      const amount = parseFloat(amountController);
+
+      if (amount < 250) {
+        setError('Minimum amount is 250');
+        setIsButtonTap(false);
+        return;
+      }
+      if (amount > currentBonusAmount) {
+        setError('Insufficient balance');
+        setIsButtonTap(false);
+        return;
+      }
+
+      let walletType = 1;
+      if (currentRedeemType === 'profit') walletType = 2;
+      if (currentRedeemType === 'referral') walletType = 3;
+
+      const successRes = await RedeemService.requestRedeem(
+        userId,
+        amount,
+        walletType,
+        noteController,
+        currentBonusId
+      );
+
+      if (successRes) {
+        setSuccess('Redeem request successful');
+        if (currentRedeemType === 'daily') {
+          setDailyBonusMap((prev) => ({ ...prev, [currentBonusId]: prev[currentBonusId] - amount }));
+        }
+        if (currentRedeemType === 'profit') {
+          setProfitBonusMapRaw((prev) => ({ ...prev, [currentBonusId]: prev[currentBonusId] - amount }));
+        }
+        if (currentRedeemType === 'referral') {
+          setReferralBonusMap((prev) => ({ ...prev, [currentBonusId]: prev[currentBonusId] - amount }));
+        }
+        setRedeemDialogOpen(false);
+        fetchRedeemHistory();
+      } else {
+        setError('Redeem request failed');
+      }
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setIsButtonTap(false);
+    }
   };
 
-  const displayedHistory = showAllHistory ? redeemHistory : redeemHistory.slice(0, 3);
+  const getStatusInfo = (status) => {
+    switch (status?.toString()) {
+      case '1':
+        return { color: theme.palette.success.main, icon: <CheckCircleIcon />, text: 'Success' };
+      case '2':
+        return { color: theme.palette.error.main, icon: <CancelIcon />, text: 'Failed' };
+      default:
+        return { color: theme.palette.warning.main, icon: <PendingIcon />, text: 'In Process' };
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
 
   if (loading) {
     return (
-      <Box
-        sx={{
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <CircularProgress sx={{ color: 'white' }} size={40} />
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        pb: { xs: 1, sm: 2 },
-        pt: { xs: 0, sm: 0 },
-      }}
-    >
+    <Box sx={{ backgroundColor: 'white', minHeight: '100vh' }}>
       {/* Header */}
-      <Box
-        sx={{
-          background: 'white',
-          boxShadow: theme.shadows[3],
-          position: 'sticky',
-          top: 0,
-          zIndex: 1000,
-        }}
-      >
-        <Container maxWidth="lg">
-          <Box sx={{ p: { xs: 1.5, sm: 2 } }}>
-            <Stack direction="row" alignItems="center" spacing={2}>
 
-              <Typography
-                variant={isMobile ? "h6" : "h5"}
-                component="h1"
-                fontWeight="bold"
-                sx={{ flex: 1 }}
-              >
-                My Redeem
+      <Container sx={{ py: 2 }}>
+        <Grid container spacing={3} sx={{ display: "flex", alignItems: "stretch" }}>
+          {/* Left: Redeem Section */}
+          <Grid item xs={12} md={6} sx={{ display: "flex", flexDirection: "column" }}>
+            {/* Daily Bonus */}
+            <Card sx={{ mb: 3, p: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                Daily Bonus Points
               </Typography>
-              <Box sx={{ width: 40 }} /> {/* Spacer for alignment */}
-            </Stack>
-          </Box>
-        </Container>
-      </Box>
+              {Object.entries(dailyBonusMap).length === 0 ? (
+                <Typography>₹0.00</Typography>
+              ) : (
+                Object.entries(dailyBonusMap).map(([key, value]) => {
+                  const canRedeem = value > 250;
+                  return (
+                    <Box key={key} sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                      <Typography>₹{value.toFixed(2)}</Typography>
+                      <Button
+                        variant="contained"
+                        disabled={!canRedeem}
+                        onClick={() => openRedeemDialog("daily", key, value)}
+                      >
+                        Redeem Now
+                      </Button>
+                    </Box>
+                  );
+                })
+              )}
+            </Card>
 
-      <Container
-        maxWidth="lg"
-        sx={{
-          mt: { xs: 1, sm: 2 },
-          px: { xs: 1, sm: 2, md: 3 },
-        }}
-      >
-        {/* Total Points Card */}
-        <Card
-          sx={{
-            background: 'linear-gradient(135deg, #667eea, #764ba2)',
-            color: 'white',
-            mb: { xs: 2, sm: 3 },
-            borderRadius: { xs: 2, sm: 3 },
-            boxShadow: theme.shadows[4],
-            overflow: 'hidden',
-          }}
-        >
-          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-            <Stack
-              direction={isMobile ? 'column' : 'row'}
-              alignItems={isMobile ? 'stretch' : 'center'}
-              spacing={isMobile ? 2 : 0}
-            >
-              <Box sx={{ flex: 1, textAlign: isMobile ? 'center' : 'left' }}>
-                <Typography
-                  variant={isMobile ? "body2" : "body1"}
-                  sx={{
-                    opacity: 0.9,
-                    mb: 1,
-                    fontSize: { xs: '0.875rem', sm: '1rem' }
-                  }}
-                >
-                  Total Available Points
-                </Typography>
-                <Typography
-                  variant={isMobile ? "h4" : "h3"}
-                  fontWeight="bold"
-                  sx={{
-                    fontSize: {
-                      xs: '2rem',
-                      sm: '2.5rem',
-                      md: '3rem'
-                    }
-                  }}
-                >
-                  {totalPoints.toFixed(2)}
-                </Typography>
-              </Box>
+            {/* Profit Bonus */}
+            <Card sx={{ mb: 3, p: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                Daily Profit Bonus Points
+              </Typography>
+              {Object.entries(profitBonusMapRaw).length === 0 ? (
+                <Typography>₹0.00</Typography>
+              ) : (
+                Object.entries(profitBonusMapRaw).map(([key, value]) => {
+                  const canRedeem = value > 250;
+                  return (
+                    <Box key={key} sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                      <Typography>₹{value.toFixed(2)}</Typography>
+                      <Button
+                        variant="contained"
+                        disabled={!canRedeem}
+                        onClick={() => openRedeemDialog("profit", key, value)}
+                      >
+                        Redeem Now
+                      </Button>
+                    </Box>
+                  );
+                })
+              )}
+            </Card>
 
-            </Stack>
-          </CardContent>
-        </Card>
-
-        {/* Main Content */}
-        <Grid container spacing={{ xs: 2, sm: 3 }}>
-          {/* Bonus Points Section */}
-          <Grid item xs={12} lg={8}>
-            <Card
-              sx={{
-                borderRadius: { xs: 2, sm: 3 },
-                boxShadow: theme.shadows[3],
-                overflow: 'hidden',
-                height: '100%',
-              }}
-            >
-              <CardContent sx={{ p: 0 }}>
-                {/* Daily Bonus Points */}
-                <Box sx={{ p: { xs: 2, sm: 3 } }}>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      mb: 2,
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => toggleSection('daily')}
-                  >
-                    <Typography
-                      variant="h6"
-                      fontWeight="bold"
-                    >
-                      Daily Bonus Points
-                    </Typography>
-                    <IconButton size="small">
-                      {expandedSections.daily ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                    </IconButton>
-                  </Box>
-
-                  {expandedSections.daily && (
-                    <Stack spacing={1.5}>
-                      {bonusData.daily.map((item) => (
-                        <Paper
-                          key={item.id}
-                          elevation={1}
-                          sx={{
-                            p: { xs: 1.5, sm: 2 },
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: { xs: 1.5, sm: 2 },
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              backgroundColor: 'action.hover',
-                              transform: 'translateY(-1px)',
-                              boxShadow: theme.shadows[2],
-                            },
-                          }}
-                        >
-                          <EmailIcon
-                            color="primary"
-                            sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}
-                          />
-                          <Box sx={{ flex: 1 }}>
-                            <Typography
-                              sx={{
-                                fontWeight: 'bold',
-                                fontSize: { xs: '0.875rem', sm: '1rem' }
-                              }}
-                            >
-                              {item.label}
-                            </Typography>
-                            <Typography
-                              variant="h6"
-                              color="primary"
-                              fontWeight="bold"
-                              sx={{ fontSize: { xs: '1.125rem', sm: '1.25rem' } }}
-                            >
-                              {item.amount?.toFixed(2) || '0.00'}
-                            </Typography>
-                          </Box>
-                          <Button
-                            variant="contained"
-                            size={isMobile ? "small" : "medium"}
-                            onClick={() => handleIndividualRedeem(item.amount, item.label)}
-                            disabled={!item.amount || item.amount <= 0 || redeeming}
-                            sx={{
-                              background: 'linear-gradient(135deg, #4CAF50, #45a049)',
-                              borderRadius: 1.5,
-                              fontWeight: 'bold',
-                              minWidth: { xs: 90, sm: 100 },
-                              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                              '&:hover': {
-                                background: 'linear-gradient(135deg, #45a049, #3d8b40)',
-                                boxShadow: theme.shadows[2],
-                              },
-                            }}
-                          >
-                            Redeem
-                          </Button>
-                        </Paper>
-                      ))}
-                    </Stack>
-                  )}
-                </Box>
-
-                <Divider />
-
-                {/* Other Bonus Points */}
-                <Box sx={{ p: { xs: 2, sm: 3 } }}>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      mb: 2,
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => toggleSection('other')}
-                  >
-                    <Typography
-                      variant="h6"
-                      fontWeight="bold"
-                    >
-                      Other Bonus Points
-                    </Typography>
-                    <IconButton size="small">
-                      {expandedSections.other ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                    </IconButton>
-                  </Box>
-
-                  {expandedSections.other && (
-                    <Stack spacing={1.5}>
-                      {bonusData.other.map((item) => (
-                        <Paper
-                          key={item.id}
-                          elevation={1}
-                          sx={{
-                            p: { xs: 1.5, sm: 2 },
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: { xs: 1.5, sm: 2 },
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              backgroundColor: 'action.hover',
-                              transform: 'translateY(-1px)',
-                              boxShadow: theme.shadows[2],
-                            },
-                          }}
-                        >
-                          <EmailIcon
-                            color="secondary"
-                            sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}
-                          />
-                          <Box sx={{ flex: 1 }}>
-                            <Typography
-                              sx={{
-                                fontWeight: 'bold',
-                                fontSize: { xs: '0.875rem', sm: '1rem' }
-                              }}
-                            >
-                              {item.label}
-                            </Typography>
-                            <Typography
-                              variant="h6"
-                              color="secondary"
-                              fontWeight="bold"
-                              sx={{ fontSize: { xs: '1.125rem', sm: '1.25rem' } }}
-                            >
-                              {item.amount?.toFixed(2) || '0.00'}
-                            </Typography>
-                          </Box>
-                          <Button
-                            variant="contained"
-                            size={isMobile ? "small" : "medium"}
-                            onClick={() => handleIndividualRedeem(item.amount, item.label)}
-                            disabled={!item.amount || item.amount <= 0 || redeeming}
-                            sx={{
-                              background: 'linear-gradient(135deg, #4CAF50, #45a049)',
-                              borderRadius: 1.5,
-                              fontWeight: 'bold',
-                              minWidth: { xs: 90, sm: 100 },
-                              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                              '&:hover': {
-                                background: 'linear-gradient(135deg, #45a049, #3d8b40)',
-                                boxShadow: theme.shadows[2],
-                              },
-                            }}
-                          >
-                            Redeem
-                          </Button>
-                        </Paper>
-                      ))}
-                    </Stack>
-                  )}
-                </Box>
-              </CardContent>
+            {/* Referral Bonus */}
+            <Card sx={{ mb: 3, p: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                Referral Bonus Points
+              </Typography>
+              {Object.entries(referralBonusMap).length === 0 ? (
+                <Typography>₹0.00</Typography>
+              ) : (
+                Object.entries(referralBonusMap).map(([key, value]) => {
+                  const canRedeem = value > 250;
+                  return (
+                    <Box key={key} sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                      <Typography>₹{value.toFixed(2)}</Typography>
+                      <Button
+                        variant="contained"
+                        disabled={!canRedeem}
+                        onClick={() => openRedeemDialog("referral", key, value)}
+                      >
+                        Redeem Now
+                      </Button>
+                    </Box>
+                  );
+                })
+              )}
             </Card>
           </Grid>
 
-          {/* Redeem History Section */}
-          <Grid item xs={12} lg={4}>
-            <Card
+          {/* Right: History Section */}
+          <Grid item xs={12} md={6} sx={{ display: "flex", flexDirection: "column" }}>
+            <Box
               sx={{
-                borderRadius: { xs: 2, sm: 3 },
-                boxShadow: theme.shadows[3],
-                overflow: 'hidden',
-                height: '100%',
+                flex: 1, // take full height of left panel automatically
+                overflowY: "auto",
+                pr: 1, // scrollbar space
               }}
             >
-              <CardContent sx={{ p: 0 }}>
-                <Box sx={{ p: { xs: 2, sm: 3 } }}>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      mb: 2,
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => toggleSection('history')}
-                  >
-                    <Typography
-                      variant="h6"
-                      fontWeight="bold"
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                      }}
-                    >
-                      <HistoryIcon fontSize={isMobile ? "small" : "medium"} />
-                      Redeem History
-                    </Typography>
-                    <IconButton size="small">
-                      {expandedSections.history ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                    </IconButton>
-                  </Box>
-
-                  {expandedSections.history && (
-                    <Stack spacing={2}>
-                      {displayedHistory.map((item, index) => (
-                        <Box
-                          key={item.id}
-                          sx={{
-                            p: { xs: 1.5, sm: 2 },
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: 2,
-                            backgroundColor: 'background.default',
-                          }}
-                        >
-                          <Box sx={{ mb: 1 }}>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                            >
-                              {item.date}
-                            </Typography>
-                          </Box>
-
-                          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                            <MessageIcon fontSize="small" color="action" />
-                            <Typography
-                              variant="body2"
-                              fontWeight="bold"
-                              sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}
-                            >
-                              {item.amount} points
-                            </Typography>
-                          </Stack>
-
-                          {item.status && (
-                            <Box sx={{ mb: 1 }}>
-                              <Chip
-                                label={item.status}
-                                size="small"
-                                color={item.status === 'Completed' ? 'success' : 'warning'}
-                                sx={{
-                                  fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                                  height: { xs: 20, sm: 24 }
-                                }}
-                              />
-                            </Box>
-                          )}
-
-                          {item.message && (
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              sx={{
-                                fontSize: { xs: '0.75rem', sm: '0.8rem' },
-                                lineHeight: 1.4
-                              }}
-                            >
-                              {item.message}
-                            </Typography>
-                          )}
+              <Typography variant="h6" sx={{ fontWeight: 500, mb: 2 }}>
+                {isFromEwallet ? "Activation History" : "Redeem History"}
+              </Typography>
+              <Stack spacing={2}>
+                {historyData.length > 0 ? (
+                  historyData.map((item, index) => {
+                    const statusInfo = getStatusInfo(item.status);
+                    return (
+                      <Paper key={index} sx={{ p: 2, backgroundColor: "#EBF4FB", flexShrink: 0 }}>
+                        {item.redeemDate && (
+                          <Typography variant="body2" sx={{ mb: 1 }}>
+                            Date {formatDate(item.redeemDate)}
+                          </Typography>
+                        )}
+                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                          Redeem Amount ₹{item.amount}
+                        </Typography>
+                        <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, mr: 1 }}>
+                            Status:
+                          </Typography>
+                          <Chip
+                            icon={statusInfo.icon}
+                            label={statusInfo.text}
+                            size="small"
+                            sx={{
+                              color: statusInfo.color,
+                              backgroundColor: `${statusInfo.color}20`,
+                            }}
+                          />
                         </Box>
-                      ))}
-                    </Stack>
-                  )}
-
-                  {/* Show More/Less Button */}
-                  {redeemHistory.length > 3 && expandedSections.history && (
-                    <Button
-                      variant="outlined"
-                      fullWidth
-                      onClick={() => setShowAllHistory(!showAllHistory)}
-                      sx={{
-                        mt: 2,
-                        borderStyle: 'dashed',
-                        color: 'text.secondary',
-                        py: 1,
-                        '&:hover': {
-                          borderColor: 'text.secondary',
-                          backgroundColor: 'action.hover',
-                        },
-                      }}
-                    >
-                      {showAllHistory ? 'Show Less' : `Show More (${redeemHistory.length - 3})`}
-                    </Button>
-                  )}
-                </Box>
-              </CardContent>
-            </Card>
+                        <Typography variant="body2">
+                          {item.status === 1
+                            ? "Your Amount is credited Successfully"
+                            : item.status === 0
+                              ? "It Will be credited in next 24 hours"
+                              : item.status === 2
+                                ? "Redeem request failed"
+                                : "Processing your request"}
+                        </Typography>
+                        {item.trans_no && (
+                          <Typography variant="body2" sx={{ mt: 1, fontStyle: "italic" }}>
+                            Transaction #: {item.trans_no}
+                          </Typography>
+                        )}
+                      </Paper>
+                    );
+                  })
+                ) : (
+                  <Typography>No redeem history found</Typography>
+                )}
+              </Stack>
+            </Box>
           </Grid>
         </Grid>
+
       </Container>
 
-      {/* Confirmation Dialog */}
+      {/* Redeem Dialog */}
       <Dialog
-        open={confirmDialog.open}
-        onClose={cancelRedeem}
-        maxWidth="sm"
+        open={redeemDialogOpen}
+        onClose={() => !isButtonTap && setRedeemDialogOpen(false)}
+        maxWidth="sm"  // smaller width
         fullWidth
         PaperProps={{
           sx: {
-            borderRadius: { xs: 2, sm: 3 },
-            m: { xs: 1, sm: 2 }
-          }
+            borderRadius: 3,
+            overflow: 'hidden', // to ensure header bg doesn't overflow
+          },
         }}
       >
-        <DialogTitle sx={{ pb: 1 }}>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <WalletIcon color="primary" />
-            <Typography variant="h6">Confirm Redeem</Typography>
-          </Stack>
+        {/* Header with background color */}
+        <DialogTitle
+          sx={{
+            textAlign: 'center',
+            fontWeight: 700,
+            fontSize: '1.25rem',
+            color: 'white',
+            backgroundColor: 'primary.main',
+            py: 1.5, // reduce height slightly
+          }}
+        >
+          Redeem Points
         </DialogTitle>
-        <DialogContent sx={{ pb: 1 }}>
-          <DialogContentText>
-            {confirmDialog.message}
-          </DialogContentText>
+
+        <DialogContent sx={{ py: 2 }}>
+          <Box sx={{ textAlign: 'center', mb: 2 }}>
+            <Typography variant="subtitle2">My Redeem Points</Typography>
+            <Typography
+              variant="h5"
+              sx={{
+                mt: 0.5,
+                color: 'primary.main',
+                fontWeight: 700,
+              }}
+            >
+              ₹{currentBonusAmount.toFixed(2)}
+            </Typography>
+          </Box>
+
+          <TextField
+            fullWidth
+            label="Amount"
+            type="number"
+            value={amountController}
+            onChange={(e) => setAmountController(e.target.value)}
+            margin="dense"
+            InputProps={{
+              sx: {
+                borderRadius: 1.5,
+                backgroundColor: '#f5f5f5',
+              },
+            }}
+            helperText="Enter amount to redeem (minimum ₹250)"
+          />
+
+          <TextField
+            fullWidth
+            label="Note"
+            value={noteController}
+            onChange={(e) => setNoteController(e.target.value)}
+            margin="dense"
+            multiline
+            rows={2}
+            placeholder="Add any remarks"
+            InputProps={{
+              sx: {
+                borderRadius: 1.5,
+                backgroundColor: '#f5f5f5',
+              },
+            }}
+          />
         </DialogContent>
-        <DialogActions sx={{ p: { xs: 2, sm: 3 }, pt: 1 }}>
+
+        <DialogActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
           <Button
-            onClick={cancelRedeem}
-            disabled={redeeming}
-            size={isMobile ? "small" : "medium"}
+            onClick={() => setRedeemDialogOpen(false)}
+            variant="outlined"
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 600,
+              color: 'text.primary',
+              borderColor: 'grey.400',
+              fontSize: '0.875rem',
+              '&:hover': { borderColor: 'grey.600' },
+            }}
+            disabled={isButtonTap}
           >
             Cancel
           </Button>
+
           <Button
-            onClick={confirmRedeem}
+            onClick={handleRedeem}
             variant="contained"
-            disabled={redeeming}
-            startIcon={redeeming ? <CircularProgress size={16} /> : null}
-            size={isMobile ? "small" : "medium"}
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 600,
+              px: 3,
+              fontSize: '0.875rem',
+            }}
+            disabled={isButtonTap}
           >
-            {redeeming ? 'Processing...' : 'Confirm Redeem'}
+            {isButtonTap ? <CircularProgress size={18} sx={{ color: 'white' }} /> : 'Redeem Now'}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Alert Snackbars */}
-      <Snackbar
-        open={!!error}
-        autoHideDuration={6000}
-        onClose={handleCloseAlert}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        sx={{
-          bottom: { xs: 70, sm: 80 }
-        }}
-      >
-        <Alert
-          onClose={handleCloseAlert}
-          severity="error"
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {error}
-        </Alert>
-      </Snackbar>
 
-      <Snackbar
-        open={!!success}
-        autoHideDuration={6000}
-        onClose={handleCloseAlert}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        sx={{
-          bottom: { xs: 70, sm: 80 }
-        }}
-      >
-        <Alert
-          onClose={handleCloseAlert}
-          severity="success"
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {success}
-        </Alert>
+      {/* Snackbars */}
+      <Snackbar open={!!error} autoHideDuration={6000} onClose={() => setError('')}>
+        <Alert severity="error">{error}</Alert>
+      </Snackbar>
+      <Snackbar open={!!success} autoHideDuration={6000} onClose={() => setSuccess('')}>
+        <Alert severity="success">{success}</Alert>
       </Snackbar>
     </Box>
   );
 };
 
-export default RedeemPage;
+export default RedeemScreen;

@@ -260,7 +260,7 @@ const RedeemScreen = ({ isFromEwallet = false }) => {
           {/* Left: Redeem Section */}
           <Grid item xs={12} md={6} sx={{ display: "flex", flexDirection: "column" }}>
             {/* Daily Bonus */}
-            <Card sx={{ mb: 3, p: 2 }}>
+            {/* <Card sx={{ mb: 3, p: 2 }}>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
                 Daily Bonus Points
               </Typography>
@@ -283,10 +283,10 @@ const RedeemScreen = ({ isFromEwallet = false }) => {
                   );
                 })
               )}
-            </Card>
+            </Card> */}
 
             {/* Profit Bonus */}
-            <Card sx={{ mb: 3, p: 2 }}>
+            {/* <Card sx={{ mb: 3, p: 2 }}>
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
                 Daily Profit Bonus Points
               </Typography>
@@ -309,7 +309,7 @@ const RedeemScreen = ({ isFromEwallet = false }) => {
                   );
                 })
               )}
-            </Card>
+            </Card> */}
 
             {/* Referral Bonus */}
             <Card sx={{ mb: 3, p: 2 }}>

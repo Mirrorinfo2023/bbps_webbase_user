@@ -34,6 +34,7 @@ import PaymentIcon from '@mui/icons-material/Payment';
 import CampaignIcon from '@mui/icons-material/Campaign';
 import WidgetsIcon from '@mui/icons-material/Widgets';
 import { useSelector, useDispatch } from 'react-redux';
+import ReceiptIcon from '@mui/icons-material/Receipt';
 
 
 
@@ -41,22 +42,26 @@ const drawerWidth = 200;
 
 let menuArray = [
   { redirect: 'dashboard', name: 'Dashboard', parent: 'dashboard', icon: <DashboardIcon sx={{ fontSize: 20 }} /> },
-  { redirect: '#', name: 'Masters', parent: 'masters', icon: <WidgetsIcon sx={{ fontSize: 20 }} /> },
+  { redirect: 'api-documentation', name: 'API Document', parent: 'api-documentation', icon: <WidgetsIcon sx={{ fontSize: 20 }} /> },
+  { redirect: 'add-money', name: 'Add Money', parent: 'add-money', icon: <AccountBalanceWalletIcon sx={{ fontSize: 20 }} /> },
+  { redirect: 'id-activation', name: 'ID Activation', parent: 'id-activation', icon: <PeopleIcon sx={{ fontSize: 20 }} /> },
+  { redirect: 'redeem', name: 'Redeem', parent: 'redeem', icon: <PaymentIcon sx={{ fontSize: 20 }} /> },
+  { redirect: 'income-passbook', name: 'Income Passbook', parent: 'income-passbook', icon: <ReceiptIcon sx={{ fontSize: 20 }} /> },
   // { redirect: '#', name: 'Affilate', parent: 'networking', icon: <PeopleIcon sx={{ fontSize: 20 }} /> },
   // { redirect: '#', name: 'Wallet', parent: 'wallet', icon: <AccountBalanceWalletIcon sx={{ fontSize: 20 }} /> },
   // { redirect: '#', name: 'Marketing', parent: 'marketing', icon: <CampaignIcon sx={{ fontSize: 20 }} /> },
   // { redirect: '#', name: 'Recharge/Payment', parent: 'recharge', icon: <PaymentIcon sx={{ fontSize: 20 }} /> },
   // { redirect: '#', name: 'Staff', parent: 'staff', icon: <PeopleIcon sx={{ fontSize: 20 }} /> },
-  // { redirect: '#', name: 'Investment', parent: 'investment', icon: <PeopleIcon sx={{ fontSize: 20 }} /> },
+  // { redirect: '#', name: 'Investment', parent: 'investment', icon: <TrendingUpIcon sx={{ fontSize: 20 }} /> },
   // { redirect: '#', name: 'Settings', parent: 'setting', icon: <SettingsIcon sx={{ fontSize: 20 }} /> }
-]
+];
 
 let menuArray1 = [
 
-  { redirect: 'add-money', name: 'add money', parent: 'masters' },
-  { redirect: 'id-activation', name: 'ID Activation', parent: 'masters' },
-  { redirect: 'redeem', name: 'Redeem', parent: 'masters' },
-  { redirect: 'income-passbook', name: 'Income Passbook', parent: 'masters' },
+  // { redirect: 'add-money', name: 'add money', parent: 'masters' },
+  // { redirect: 'id-activation', name: 'ID Activation', parent: 'masters' },
+  // { redirect: 'redeem', name: 'Redeem', parent: 'masters' },
+  // { redirect: 'income-passbook', name: 'Income Passbook', parent: 'masters' },
   // { redirect: 'leads-user-action-report', name: 'Leads User Action Report', parent: 'masters' },
   // { redirect: 'leads-user-form-request-list', name: 'Leads User Form Report', parent: 'masters' },
   // { redirect: 'leads-user-track-report', name: 'Leads User Track Report', parent: 'masters' },

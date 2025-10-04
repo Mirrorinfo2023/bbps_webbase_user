@@ -218,13 +218,13 @@ const UserName = ({ onForgotPassword, onUnblock }) => {
                     token: token,
                     refreshToken: refreshToken
                 });
-                route.replace('/dashboard')
+
                 // Request OTP after successful login
-                // await handleRequestOtp();
+                await handleRequestOtp();
 
                 // Open OTP dialog (no success alert shown here)
-                // setShowOtpDialog(true);
-
+                setShowOtpDialog(true);
+                // route.replace('/dashboard')
             } else {
                 setAlert({ open: true, type: false, message: decryptedResponse.message });
             }

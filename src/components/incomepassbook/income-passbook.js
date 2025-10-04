@@ -20,8 +20,6 @@ import {
     Chip,
     useMediaQuery,
     useTheme,
-    ToggleButton,
-    ToggleButtonGroup,
     CircularProgress,
     Alert,
     Snackbar,
@@ -37,21 +35,21 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { format, parseISO, startOfMonth } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfDay } from 'date-fns';
 import {
     FormControl,
     InputLabel,
     Select,
     MenuItem
 } from '@mui/material';
-import API from "../../../utils/api"
+// Export functionality
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+
 import { DataDecrypt, DataEncrypt } from "../../../utils/encryption"
 import axios from 'axios';
-import { parse } from 'date-fns';
-// API Base URL
-const API_BASE_URL = 'http://localhost:4223/api';
-
-// Summary Cards Component - Reduced Height by 20%
+import API from "../../../utils/api"
+// Summary Cards Component - Simple and Attractive Design
 const SummaryCards = ({ totalAmount }) => {
     const totalCredit = parseFloat(totalAmount?.totalCredit || 0);
     const totalDebit = parseFloat(totalAmount?.totalDebit || 0);
@@ -61,23 +59,23 @@ const SummaryCards = ({ totalAmount }) => {
         {
             title: 'Total Credit',
             amount: totalCredit,
-            icon: <AccountBalanceWallet sx={{ fontSize: 22, opacity: 0.9 }} />,
-            gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            textColor: 'white'
+            icon: <AccountBalanceWallet sx={{ fontSize: 22 }} />,
+            bgColor: '#e8f5e9', // Light green
+            textColor: '#2e7d32'
         },
         {
             title: 'Total Debit',
             amount: totalDebit,
-            icon: <TrendingUp sx={{ fontSize: 22, opacity: 0.9 }} />,
-            gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-            textColor: 'white'
+            icon: <TrendingUp sx={{ fontSize: 22 }} />,
+            bgColor: '#ffebee', // Light red
+            textColor: '#c62828'
         },
         {
             title: 'Available Balance',
             amount: parseFloat(totalBalance),
-            icon: <Receipt sx={{ fontSize: 22, opacity: 0.9 }} />,
-            gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-            textColor: 'white'
+            icon: <Receipt sx={{ fontSize: 22 }} />,
+            bgColor: '#e3f2fd', // Light blue
+            textColor: '#1565c0'
         }
     ];
 
@@ -86,20 +84,19 @@ const SummaryCards = ({ totalAmount }) => {
             {cards.map((card, index) => (
                 <Grid item xs={12} sm={4} key={index}>
                     <Card sx={{
-                        background: card.gradient,
+                        backgroundColor: card.bgColor,
                         color: card.textColor,
-                        height: 80,
+                        height: 100,
                         borderRadius: 2,
-                        boxShadow: '0 4px 12px 0 rgba(0,0,0,0.1)',
-                        transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+                        boxShadow: '0 2px 8px 0 rgba(0,0,0,0.1)',
+                        transition: 'transform 0.2s ease-in-out',
                         '&:hover': {
                             transform: 'translateY(-2px)',
-                            boxShadow: '0 6px 20px 0 rgba(0,0,0,0.15)'
                         }
                     }}>
                         <CardContent sx={{
                             textAlign: 'center',
-                            py: 1.5,
+                            py: 2,
                             height: '100%',
                             display: 'flex',
                             flexDirection: 'column',
@@ -111,16 +108,14 @@ const SummaryCards = ({ totalAmount }) => {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 gap: 1,
-                                mb: 0.5
+                                mb: 1
                             }}>
                                 {card.icon}
                                 <Typography
                                     variant="body2"
                                     sx={{
-                                        opacity: 0.9,
-                                        fontSize: '0.75rem',
                                         fontWeight: 600,
-                                        letterSpacing: '0.5px'
+                                        fontSize: '0.8rem',
                                     }}
                                 >
                                     {card.title}
@@ -132,9 +127,7 @@ const SummaryCards = ({ totalAmount }) => {
                                 variant="h6"
                                 sx={{
                                     fontWeight: 700,
-                                    fontSize: '1.25rem',
-                                    lineHeight: 1.2,
-                                    textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                                    fontSize: '1.3rem',
                                 }}
                             >
                                 ₹{card.amount.toLocaleString('en-IN', {
@@ -142,10 +135,6 @@ const SummaryCards = ({ totalAmount }) => {
                                     maximumFractionDigits: 2
                                 })}
                             </Typography>
-
-                            {/* Status Indicator */}
-
-
                         </CardContent>
                     </Card>
                 </Grid>
@@ -154,7 +143,7 @@ const SummaryCards = ({ totalAmount }) => {
     );
 };
 
-// Combined Filter Component - All filters in one row
+// Combined Filter Component
 const CombinedFilters = ({
     filter,
     onFilterChange,
@@ -164,16 +153,17 @@ const CombinedFilters = ({
     onToDateChange,
     searchTerm,
     onSearchChange,
-    onExport
+    onExport,
+    loading
 }) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
     const filters = [
-        { value: 'all', label: 'All Transactions', shortLabel: 'All' },
-        { value: 'Daily Bonus Income', label: 'Daily Self Bonus', shortLabel: 'Self' },
-        { value: 'Daily Repurchase Bonus', label: 'Daily Profit Bonus', shortLabel: 'Profit' },
-        { value: 'Bonus', label: 'Referral Bonus', shortLabel: 'Referral' }
+        { value: 'all', label: 'All Transactions' },
+        { value: 'Daily Bonus Income', label: 'Daily Self Bonus' },
+        { value: 'Daily Repurchase Bonus', label: 'Daily Profit Bonus' },
+        { value: 'Bonus', label: 'Referral Bonus' }
     ];
 
     return (
@@ -188,7 +178,7 @@ const CombinedFilters = ({
                 <Grid item xs={12} md={3}>
                     <TextField
                         fullWidth
-                        placeholder="Search by order ID, description..."
+                        placeholder="Search transactions..."
                         value={searchTerm}
                         onChange={(e) => onSearchChange(e.target.value)}
                         size="small"
@@ -202,7 +192,6 @@ const CombinedFilters = ({
                         sx={{
                             '& .MuiOutlinedInput-root': {
                                 borderRadius: 2,
-                                width: "100%"
                             }
                         }}
                     />
@@ -217,6 +206,7 @@ const CombinedFilters = ({
                                     label="Start Date"
                                     value={fromDate}
                                     onChange={onFromDateChange}
+                                    disabled={loading}
                                     renderInput={(params) => (
                                         <TextField
                                             {...params}
@@ -238,6 +228,7 @@ const CombinedFilters = ({
                                     label="End Date"
                                     value={toDate}
                                     onChange={onToDateChange}
+                                    disabled={loading}
                                     renderInput={(params) => (
                                         <TextField
                                             {...params}
@@ -257,53 +248,42 @@ const CombinedFilters = ({
                 </Grid>
 
                 {/* Type Filters */}
-                <Grid item xs={12} md={4}>
-                    <FormControl
-                        size="small"
-                        sx={{
-                            width: "auto", // set the width
-                        }}
-                    >
-                        <InputLabel id="filter-select-label">Filter</InputLabel>
+                <Grid item xs={12} md={3}>
+                    <FormControl fullWidth size="small">
+                        <InputLabel id="filter-select-label">Filter Type</InputLabel>
                         <Select
                             labelId="filter-select-label"
-                            value={filter || (filters.length > 0 ? filters[0].value : '')} // default to first
-                            label="Filter"
+                            value={filter}
+                            label="Filter Type"
                             onChange={onFilterChange}
-                            sx={{
-                                fontWeight: 600,
-                                fontSize: '0.9rem',
-                            }}
+                            disabled={loading}
+                            sx={{ borderRadius: 2 }}
                         >
                             {filters.map((filterOption) => (
                                 <MenuItem key={filterOption.value} value={filterOption.value}>
-                                    {isMobile ? filterOption.shortLabel : filterOption.label}
+                                    {filterOption.label}
                                 </MenuItem>
                             ))}
                         </Select>
                     </FormControl>
                 </Grid>
 
-
-
-
-
                 {/* Export Button */}
-                <Grid item xs={12} md={1}>
+                <Grid item xs={12} md={2}>
                     <Button
-                        variant="outlined"
+                        variant="contained"
                         fullWidth
                         startIcon={<Download fontSize="small" />}
                         size="small"
                         onClick={onExport}
+                        disabled={loading}
                         sx={{
                             borderRadius: 2,
                             textTransform: 'none',
                             fontWeight: 600,
-                            fontSize: '0.75rem'
                         }}
                     >
-                        {isMobile ? 'Export' : 'Export'}
+                        Export
                     </Button>
                 </Grid>
             </Grid>
@@ -311,7 +291,7 @@ const CombinedFilters = ({
     );
 };
 
-// Transaction Card for Mobile with better text management
+// Transaction Card for Mobile
 const TransactionCard = ({ transaction }) => {
     const getCategoryColor = (category) => {
         switch (category) {
@@ -329,10 +309,6 @@ const TransactionCard = ({ transaction }) => {
             case 'Bonus': return 'Referral Bonus';
             default: return 'Other Income';
         }
-    };
-
-    const getTypeLabel = (type) => {
-        return type === 'Credit' ? 'Credit' : 'Debit';
     };
 
     const getTypeColor = (type) => {
@@ -356,34 +332,19 @@ const TransactionCard = ({ transaction }) => {
                     mb: 1.5
                 }}>
                     <Box>
-                        <Typography
-                            variant="subtitle2"
-                            sx={{
-                                fontWeight: 700,
-                                fontSize: '0.75rem',
-                                color: 'text.secondary'
-                            }}
-                        >
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: '0.75rem' }}>
                             Order #{transaction.transactionId}
                         </Typography>
-                        <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ fontSize: '0.7rem' }}
-                        >
+                        <Typography variant="caption" color="text.secondary">
                             {format(parseISO(transaction.incomeDate), 'MMM dd, yyyy • hh:mm a')}
                         </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
                         <Chip
-                            label={getTypeLabel(transaction.type)}
+                            label={transaction.type}
                             color={getTypeColor(transaction.type)}
                             size="small"
-                            sx={{
-                                fontSize: '0.65rem',
-                                height: '20px',
-                                fontWeight: 600
-                            }}
+                            sx={{ fontSize: '0.65rem', height: '20px' }}
                         />
                         <Chip
                             label={getCategoryLabel(transaction.details)}
@@ -392,75 +353,41 @@ const TransactionCard = ({ transaction }) => {
                                 backgroundColor: getCategoryColor(transaction.details),
                                 color: 'white',
                                 fontSize: '0.6rem',
-                                height: '18px',
-                                fontWeight: 600
+                                height: '18px'
                             }}
                         />
                     </Box>
                 </Box>
 
                 {/* Description */}
-                <Typography
-                    variant="body2"
-                    sx={{
-                        fontWeight: 500,
-                        fontSize: '0.8rem',
-                        lineHeight: 1.3,
-                        mb: 1
-                    }}
-                >
+                <Typography variant="body2" sx={{ mb: 1 }}>
                     {transaction.details}
                 </Typography>
 
                 <Divider sx={{ my: 1 }} />
 
-                {/* Amount and Balance Row */}
-                <Grid container spacing={1}>
-                    <Grid item xs={6}>
-                        <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ fontSize: '0.7rem', fontWeight: 600 }}
-                        >
-                            Transaction Amount:
+                {/* Amount and Balance */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Box>
+                        <Typography variant="caption" color="text.secondary">
+                            Amount:
                         </Typography>
-                        <Typography
-                            variant="body2"
-                            sx={{
-                                fontWeight: 700,
-                                color: transaction.type === 'Credit' ? 'success.main' : 'error.main',
-                                fontSize: '0.85rem'
-                            }}
-                        >
-                            ₹{(transaction.type === 'Credit' ? transaction.credit : transaction.debit).toLocaleString('en-IN', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                            })}
+                        <Typography variant="body2" sx={{
+                            fontWeight: 700,
+                            color: transaction.type === 'Credit' ? 'success.main' : 'error.main'
+                        }}>
+                            ₹{(transaction.type === 'Credit' ? transaction.credit : transaction.debit).toLocaleString('en-IN')}
                         </Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                        <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{ fontSize: '0.7rem', fontWeight: 600 }}
-                        >
-                            Closing Balance:
+                    </Box>
+                    <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="caption" color="text.secondary">
+                            Balance:
                         </Typography>
-                        <Typography
-                            variant="body2"
-                            sx={{
-                                fontWeight: 700,
-                                fontSize: '0.85rem',
-                                color: 'primary.main'
-                            }}
-                        >
-                            ₹{parseFloat(transaction.closingBalance).toLocaleString('en-IN', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                            })}
+                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                            ₹{parseFloat(transaction.closingBalance).toLocaleString('en-IN')}
                         </Typography>
-                    </Grid>
-                </Grid>
+                    </Box>
+                </Box>
             </CardContent>
         </Card>
     );
@@ -486,69 +413,55 @@ const TransactionTable = ({ transactions }) => {
         }
     };
 
-    const getTypeColor = (type) => {
-        return type === 'Credit' ? 'success' : 'error';
-    };
-
     return (
         <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: '0 2px 8px 0 rgba(0,0,0,0.1)' }}>
-            <Table size="small">
-                <TableHead sx={{ backgroundColor: 'primary.main' }}>
+            <Table>
+                <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
                     <TableRow>
-                        <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.8rem', py: 1 }}>Order No</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.8rem', py: 1 }}>Date & Time</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.8rem', py: 1 }}>Category</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.8rem', py: 1 }}>Description</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.8rem', py: 1 }}>Amount</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.8rem', py: 1 }}>Closing Balance</TableCell>
+                        <TableCell sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>Order No</TableCell>
+                        <TableCell sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>Date & Time</TableCell>
+                        <TableCell sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>Category</TableCell>
+                        <TableCell sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>Description</TableCell>
+                        <TableCell sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>Type</TableCell>
+                        <TableCell sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>Amount</TableCell>
+                        <TableCell sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>Closing Balance</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
                     {transactions.map((transaction) => (
-                        <TableRow key={transaction.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                            <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', py: 1 }}>
+                        <TableRow key={transaction.id} hover>
+                            <TableCell sx={{ fontWeight: 600, whitespace: "nowrap" }}>
                                 #{transaction.transactionId}
                             </TableCell>
-                            {/* Date & Time */}
-                            <TableCell sx={{ fontSize: '0.8rem', py: 1 }}>
-                                {format(parse(transaction.incomeDate, 'dd-MM-yyyy HH:mm:ss', new Date()), 'dd MMM yyyy')}
-                                <br />
-                                <Typography variant="caption" color="text.secondary">
-                                    {format(parse(transaction.incomeDate, 'dd-MM-yyyy HH:mm:ss', new Date()), 'hh:mm a')}
-                                </Typography>
-                            </TableCell>
+                            <TableCell>
+                                {(transaction.incomeDate)}
 
-                            <TableCell sx={{ py: 1 }}>
+                            </TableCell>
+                            <TableCell>
                                 <Chip
                                     label={getCategoryLabel(transaction.details)}
                                     size="small"
                                     sx={{
                                         backgroundColor: getCategoryColor(transaction.details),
                                         color: 'white',
-                                        fontWeight: 600,
-                                        fontSize: '0.7rem',
-                                        height: '24px'
+                                        fontWeight: 600, whitespace: "nowrap"
                                     }}
                                 />
                             </TableCell>
-                            <TableCell sx={{ fontSize: '0.8rem', py: 1 }}>{transaction.details}</TableCell>
-                            <TableCell sx={{ py: 1 }}>
+                            <TableCell>{transaction.details}</TableCell>
+                            <TableCell>
                                 <Chip
-                                    label={`₹${(transaction.type === 'Credit' ? transaction.credit : transaction.debit).toLocaleString('en-IN', {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2
-                                    })}`}
-                                    color={getTypeColor(transaction.type)}
+                                    label={transaction.type}
+                                    color={transaction.type === 'Credit' ? 'success' : 'error'}
                                     size="small"
                                     variant="outlined"
-                                    sx={{ fontSize: '0.7rem', fontWeight: 600 }}
                                 />
                             </TableCell>
-                            <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', py: 1 }}>
-                                ₹{parseFloat(transaction.closingBalance).toLocaleString('en-IN', {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                })}
+                            <TableCell sx={{ fontWeight: 600, whitespace: "nowrap" }}>
+                                ₹{(transaction.type === 'Credit' ? transaction.credit : transaction.debit).toLocaleString('en-IN')}
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 600, whitespace: "nowrap" }}>
+                                ₹{parseFloat(transaction.closingBalance).toLocaleString('en-IN')}
                             </TableCell>
                         </TableRow>
                     ))}
@@ -570,58 +483,54 @@ const IncomePassbook = ({ userId = '34' }) => {
     const [filter, setFilter] = useState('all');
     const [transactions, setTransactions] = useState([]);
     const [totalAmount, setTotalAmount] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
-    const [page, setPage] = useState(1);
-    const [hasMore, setHasMore] = useState(true);
 
     // API Call Function
-    const fetchIncomePassbook = async (pageNum = 1, shouldReset = false) => {
+    const fetchIncomePassbook = async () => {
         try {
-            if (pageNum === 1) setLoading(true);
+            setLoading(true);
             setError('');
 
             const payload = {
                 user_id: userId,
-                page: pageNum,
+                page: 1,
                 startdate: fromDate ? format(fromDate, 'yyyy-MM-dd') : null,
                 enddate: toDate ? format(toDate, 'yyyy-MM-dd') : null,
                 filter: filter && filter !== 'all' ? [filter] : null,
             };
 
-            console.log('Raw Request Payload:', payload);
+            console.log('API Request Payload:', payload);
 
             const encReq = DataEncrypt(JSON.stringify(payload));
 
-            const response = await axios.post(
+            const response = await API.post(
                 `https://api.mayway.in/api/report/dbafcc3a978c44e1e6255bfda23d108c5463cf16`,
                 { encReq },
-                { headers: { 'Content-Type': 'application/json' } }
+                {
+                    headers: { 'Content-Type': 'application/json' },
+                    timeout: 10000
+                }
             );
 
             const encryptedRes = response.data;
-            const data = DataDecrypt(encryptedRes); // ✅ Already an object
-            console.log('Decrypted Response:', data);
+            const data = DataDecrypt(encryptedRes);
+            console.log('API Response:', data);
 
             if (data.status === 200 && data.message !== 'Data Not Found') {
-                // Map API response to your state structure
                 const mappedTransactions = (data.data || []).map(tx => ({
                     id: tx.transaction_id,
                     transactionId: tx.transaction_id,
                     type: tx.type,
                     details: tx.details,
-                    credit: tx.credit,
-                    debit: tx.debit,
-                    closingBalance: tx.closing_balance,
+                    credit: parseFloat(tx.credit || 0),
+                    debit: parseFloat(tx.debit || 0),
+                    closingBalance: parseFloat(tx.closing_balance || 0),
                     incomeDate: tx.income_date,
                 }));
 
-                if (shouldReset || pageNum === 1) {
-                    setTransactions(mappedTransactions);
-                } else {
-                    setTransactions(prev => [...prev, ...mappedTransactions]);
-                }
+                setTransactions(mappedTransactions);
 
                 setTotalAmount({
                     totalCredit: data.totalAmount?.total_credit || "0",
@@ -630,108 +539,124 @@ const IncomePassbook = ({ userId = '34' }) => {
                     closingBalance: data.totalAmount?.closing_balance || "0",
                 });
 
-                setHasMore(mappedTransactions.length >= 10);
-
-                if (pageNum === 1 && mappedTransactions.length > 0) {
-                    setSuccess(`Loaded ${mappedTransactions.length} transactions`);
-                }
+                setSuccess(`Loaded ${mappedTransactions.length} transactions`);
             } else {
-                if (shouldReset || pageNum === 1) setTransactions([]);
-                setTotalAmount({ totalCredit: "0", totalDebit: "0" });
-                setHasMore(false);
-
-                if (pageNum === 1) setSuccess('No transactions found for the selected criteria');
+                setTransactions([]);
+                setTotalAmount({
+                    totalCredit: "0",
+                    totalDebit: "0",
+                    openingBalance: "0",
+                    closingBalance: "0"
+                });
+                setSuccess('No transactions found for the selected criteria');
             }
         } catch (err) {
             console.error('API Error:', err);
-            setError('Failed to load transactions. Please check your connection and try again.');
-
-            if (pageNum === 1) {
-                setTransactions([]);
-                setTotalAmount({ totalCredit: "0", totalDebit: "0" });
-            }
+            setError('Failed to load transactions. Please try again.');
+            setTransactions([]);
         } finally {
             setLoading(false);
         }
     };
 
-
-
-    // Load transactions
-    const loadTransactions = (pageNum = 1, shouldReset = false) => {
-        fetchIncomePassbook(pageNum, shouldReset);
-        setPage(pageNum);
-    };
-
-    // Load more transactions
-    const loadMoreTransactions = () => {
-        loadTransactions(page + 1, false);
-    };
-
-    // Initial load
+    // Load transactions when component mounts
     useEffect(() => {
-        loadTransactions(1, true);
+        fetchIncomePassbook();
     }, []);
 
-    // Reload when filters change
+    // Reload when filters or dates change
     useEffect(() => {
-        loadTransactions(1, true);
+        const timer = setTimeout(() => {
+            fetchIncomePassbook();
+        }); // Debounce to avoid too many API calls
+
+        return () => clearTimeout(timer);
     }, [filter, fromDate, toDate]);
 
-    // Filter transactions based on search term
+    // Handle filter change
+    const handleFilterChange = (event) => {
+        setFilter(event.target.value);
+    };
+
+    // Handle date changes
+    const handleFromDateChange = (newDate) => {
+        setFromDate(newDate);
+    };
+
+    const handleToDateChange = (newDate) => {
+        setToDate(newDate);
+    };
+
+    // Filter transactions based on search term (client-side)
     const filteredTransactions = React.useMemo(() => {
         if (!searchTerm) return transactions;
 
+        const searchLower = searchTerm.toLowerCase();
         return transactions.filter(transaction =>
-            transaction.transactionId?.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
-            transaction.details?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            transaction.type?.toLowerCase().includes(searchTerm.toLowerCase())
+            transaction.transactionId?.toString().toLowerCase().includes(searchLower) ||
+            transaction.details?.toLowerCase().includes(searchLower) ||
+            transaction.type?.toLowerCase().includes(searchLower)
         );
     }, [transactions, searchTerm]);
 
-    const handleFilterChange = (event, newFilter) => {
-        if (newFilter !== null) {
-            setFilter(newFilter);
-        }
-    };
 
-    // Export functionality
     const handleExport = () => {
-        const dataStr = JSON.stringify({
-            transactions: filteredTransactions,
-            totalAmount: totalAmount,
-            generatedAt: new Date().toISOString()
-        }, null, 2);
+        // 1. Convert transactions to JSON rows
+        const worksheetData = filteredTransactions.map(txn => ({
+            TransactionID: txn.transaction_id,
+            Type: txn.type,
+            SubType: txn.sub_type,
+            Credit: txn.credit,
+            Debit: txn.debit,
+            Balance: txn.closing_balance,
+            Date: txn.income_date,
+            Status: txn.status,
+            Details: txn.details,
+            Plan: txn.plan_name,
+            Mobile: txn.sender_mobile,
+            MLM_ID: txn.sender_mlm_id,
+        }));
 
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(dataBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `income-passbook-${format(new Date(), 'yyyy-MM-dd')}.json`;
-        link.click();
-        URL.revokeObjectURL(url);
+        // 2. Create sheet
+        const worksheet = XLSX.utils.json_to_sheet(worksheetData);
 
-        setSuccess('Data exported successfully!');
+        // 3. Find last row
+        const lastRow = worksheetData.length + 1; // +1 for header row
+
+
+        // 5. Create workbook
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "IncomePassbook");
+
+        // 6. Export as Excel
+        const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+        const data = new Blob([excelBuffer], { type: "application/octet-stream" });
+        saveAs(data, `income-passbook-${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+
+        setSuccess("Data exported successfully!");
     };
+
+
 
     return (
         <LocalizationProvider dateAdapter={AdapterDateFns}>
             <Box sx={{ flexGrow: 1, backgroundColor: '#f8f9fa', minHeight: '100vh', py: 2 }}>
                 <Container maxWidth="xl">
-                    {/* Summary Cards - Reduced Height */}
+                    {/* Summary Cards */}
                     <SummaryCards totalAmount={totalAmount} />
 
-                    {/* Combined Filters - All in one row */}
+                    {/* Combined Filters */}
                     <CombinedFilters
                         filter={filter}
                         onFilterChange={handleFilterChange}
                         fromDate={fromDate}
                         toDate={toDate}
-                        onFromDateChange={setFromDate}
-                        onToDateChange={setToDate}
+                        onFromDateChange={handleFromDateChange}
+                        onToDateChange={handleToDateChange}
                         searchTerm={searchTerm}
                         onSearchChange={setSearchTerm}
                         onExport={handleExport}
+                        loading={loading}
                     />
 
                     {/* Error Alert */}
@@ -742,11 +667,11 @@ const IncomePassbook = ({ userId = '34' }) => {
                     )}
 
                     {/* Transactions Header */}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>
-                            Transactions ({filteredTransactions.length})
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                            Transactions {filteredTransactions.length > 0 && `(${filteredTransactions.length})`}
                         </Typography>
-                        {loading && <CircularProgress size={20} />}
+                        {loading && <CircularProgress size={24} />}
                     </Box>
 
                     {/* Transactions List */}
@@ -763,9 +688,9 @@ const IncomePassbook = ({ userId = '34' }) => {
                     ) : isMobile ? (
                         // Mobile View - Cards
                         <Box>
-                            {filteredTransactions.map((transaction, index) => (
+                            {filteredTransactions.map((transaction) => (
                                 <TransactionCard
-                                    key={transaction.id || index}
+                                    key={transaction.id}
                                     transaction={transaction}
                                 />
                             ))}
@@ -773,25 +698,6 @@ const IncomePassbook = ({ userId = '34' }) => {
                     ) : (
                         // Desktop View - Table
                         <TransactionTable transactions={filteredTransactions} />
-                    )}
-
-                    {/* Load More Button */}
-                    {hasMore && transactions.length > 0 && !loading && (
-                        <Box sx={{ textAlign: 'center', mt: 2 }}>
-                            <Button
-                                variant="outlined"
-                                size="small"
-                                onClick={loadMoreTransactions}
-                                disabled={loading}
-                                sx={{
-                                    borderRadius: 2,
-                                    textTransform: 'none',
-                                    fontWeight: 600
-                                }}
-                            >
-                                Load More Transactions
-                            </Button>
-                        </Box>
                     )}
 
                     {/* Success Snackbar */}
